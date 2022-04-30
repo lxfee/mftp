@@ -24,7 +24,7 @@ public:
 	Socket accept(Ipaddr& addr);
 	int shutdown(ShutdownType howto);
 	int read(void* buf, size_t nbytes);
-	int write(void* buf, size_t nbytes);
+	int write(const void* buf, size_t nbytes);
 	int close();
 	int recvfrom(void* buf, size_t nbytes, Ipaddr& from);
 	int sendto(void *buf, size_t nbytes, const Ipaddr& to);

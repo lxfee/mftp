@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <cassert>
 #include <iostream>
-#include "Socket.h"
+#include "socket.h"
 
 #define panic(msg) std::cerr << msg << std::endl; assert(0)
 
@@ -116,7 +116,7 @@ int Socket::read(void* buf, size_t nbytes) {
     return ::read(sock->sock, buf, nbytes);
 }
 
-int Socket::write(void* buf, size_t nbytes) {
+int Socket::write(const void* buf, size_t nbytes) {
     return ::write(sock->sock, buf, nbytes);
 }
 

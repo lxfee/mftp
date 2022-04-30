@@ -1,14 +1,21 @@
 #include <iostream>
-#include "Socket.h"
+#include "socket.h"
+#include "session.h"
+#include <fstream>
 
 using namespace std;
 
 int main() {
-    Socket client;
-    cout << client.connect(Ipaddr("127.0.0.1", 1234)) << endl;
+    Socket clientsock;
+    cout << clientsock.connect(Ipaddr("127.0.0.1", 1234)) << endl;
     char buf[100];
-    while(client.read(buf, sizeof buf) > 0) {
-        cout << buf << endl;
-    }
-    client.close();
+    
+    ifstream fin;
+    fin.open("2.txt", ios::binary);
+    sendstream(clientsock, fin);
+
+
+    clientsock.shutdown(SD_WR);
+    clientsock.read(0, 0);
+    clientsock.close();
 }
