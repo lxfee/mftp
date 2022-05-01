@@ -11,8 +11,8 @@ int main() {
     clientsock.connect(clientaddr);
     string cmd;
     Session scmd(clientaddr, clientsock, CLOSEMODE::ACTIVE);
-
-    while(scmd.recvmsg(cmd) > 0) {
+    scmd.recvmsg(cmd);
+    while(1) {
         if(cmd == "BYE") break;
         getline(cin, cmd);
         scmd.sendmsg(cmd);

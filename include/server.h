@@ -6,7 +6,6 @@
 #define CMDPORT  114
 #define DATAPORT 514
 #define cmderror(respond) {scmd.sendmsg(respond); return -1;} 
-#define neterror(msg) {std::cerr << msg << std::endl; return -1;}
 
 struct ServerConfig {
 public:
@@ -21,7 +20,7 @@ private:
 
 class Server {
 public:
-    int operator()(const Ipaddr& clientaddr, const Socket& cmdsock);
+    void operator()(Session& scmd);
 private:
     int login(Session& scmd);
     static ServerConfig config; 

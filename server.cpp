@@ -81,15 +81,9 @@ int ServerConfig::loadconfig(std::string filename) {
 }
 
 
-
-
-int Server::operator()(const Ipaddr& addr, const Socket& sock) {
+void Server::operator()(Session& scmd) {
     // init
-    user.clear();
-    passwd.clear();
-    Session scmd(addr, sock, CLOSEMODE::PASSIVE);
-
-    if(login(scmd)) return 0;
+    if(login(scmd)) return ;
 
     std::string cmd;
     while(1) {
@@ -103,7 +97,6 @@ int Server::operator()(const Ipaddr& addr, const Socket& sock) {
             scmd.sendmsg("ERR: unknown cmd");
         }
     }
-    return 0;
 }
 
 ServerConfig Server::config; 
@@ -111,14 +104,16 @@ ServerConfig Server::config;
 int Server::login(Session& scmd) {
     std::string cmd;
     scmd.sendmsg("LOGIN");
-    
     // USER
     scmd.readcmd();
     scmd.gettok(cmd);
-    if(cmd != "USER") cmderror("ERR: request error");
+    if(cmd != "USER") 
+        cmderror("ERR: request error");
+    
     scmd.gettok(cmd);
     if(cmd == "anonymous") {
-        if(!config.allowAnonymous) cmderror("ERR: anonymous is not allow");
+        if(!config.allowAnonymous) 
+            cmderror("ERR: anonymous is not allow");
     } else if(!config.users.count(cmd)) {
         cmderror("ERR: user not exist!");
     }

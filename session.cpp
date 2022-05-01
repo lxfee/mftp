@@ -1,6 +1,7 @@
 #include "session.h"
 #include <iostream>
 #include <algorithm>
+#include <exception>
 
 Session::Session(const Ipaddr& addr, const Socket& sock, CLOSEMODE mode) : addr(addr), sock(sock), mode(mode) {}
 
@@ -22,54 +23,55 @@ Session::~Session() {
     sock.close();
 }
 
-int Session::sendmsg(const std::string& msg) {
+void Session::sendmsg(const std::string& msg) {
     std::cout << "SEND: " << msg << std::endl;
 
     std::string tmsg = msg;
     if(tmsg.back() != '\n') tmsg.push_back('\n'); // 换行符为结尾
-    return sock.write(tmsg.c_str(), tmsg.size());
+    if(sock.write(tmsg.c_str(), tmsg.size()) < 0) {
+        throw "session closed";
+    }
 }
 
-int Session::sendstream(std::istream& is) {
+
+void Session::sendstream(std::istream& is) {
     char buffer[BUFFER_SIZE];
     int nbytes;
-    int totbytes = 0;
     do {
         is.read(buffer, sizeof(buffer));
         nbytes = is.gcount();
-        if(sock.write(buffer, nbytes) < 0) break; 
-        totbytes += nbytes;
+        if(sock.write(buffer, nbytes) < 0) {
+            throw "session closed";
+        }
     } while(nbytes);
-    return totbytes;
+    
 }
 
-int Session::recvmsg(std::string& msg) {
+void Session::recvmsg(std::string& msg) {
     std::cout << "RECV: ";
 
     msg.clear();
     char ch;
     int nbytes;
-    int totbytes = 0;
-    while((nbytes = sock.read(&ch, 1)) > 0) {
-        totbytes++;
+    while((nbytes = sock.read(&ch, 1)) >= 0) {
         if(ch == '\n') break;
         msg.push_back(ch);
     }
     std::cout << msg << std::endl;
-    if(nbytes < 0) return -1;
-    
-    return totbytes;
+    if(nbytes <= 0) {
+        throw "session closed";
+    }
 }
 
-int Session::recvstream(std::ostream& os) {
+void Session::recvstream(std::ostream& os) {
     char buffer[BUFFER_SIZE];
     int nbytes;
-    int totbytes = 0;
     while((nbytes = sock.read(buffer, sizeof(buffer))) > 0) {
-        totbytes += nbytes;
         os.write(buffer, nbytes);
     }
-    return totbytes;
+    if(nbytes < 0) {
+        throw "session closed";
+    }
 }
 
 void Session::gettok(std::string& cmd) {
@@ -86,22 +88,19 @@ void Session::gettok(std::string& cmd) {
 }
 
 
-int Session::prereadcmd() {
-    int nbytes = 0;
-    nbytes = recvmsg(prebuffercmd);
+void Session::prereadcmd() {
+    recvmsg(prebuffercmd);
     buffercmd = prebuffercmd;
     std::reverse(buffercmd.begin(), buffercmd.end());
-    return nbytes;
 }
 
-int Session::readcmd() {
+void Session::readcmd() {
     if(!prebuffercmd.empty()) {
         swap(buffercmd, prebuffercmd);
         prebuffercmd.clear();
         std::reverse(buffercmd.begin(), buffercmd.end());
-        return buffercmd.size();
+        return ;
     }
-    int nbytes = recvmsg(buffercmd);
+    recvmsg(buffercmd);
     std::reverse(buffercmd.begin(), buffercmd.end());
-    return nbytes;
 }
