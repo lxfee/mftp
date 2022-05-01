@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <memory>
+#define panic(msg) std::cerr << msg << std::endl; assert(0)
+
 enum Iptype {IPV4};
 enum Protocol {P_TCP, P_UDP};
 enum ShutdownType {SD_RD, SD_WR, SD_RDWR};

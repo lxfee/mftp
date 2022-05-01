@@ -7,15 +7,14 @@ using namespace std;
 
 int main() {
     Socket clientsock;
-    cout << clientsock.connect(Ipaddr("127.0.0.1", 1234)) << endl;
-    char buf[100];
-    
-    ifstream fin;
-    fin.open("2.txt", ios::binary);
-    sendstream(clientsock, fin);
+    Ipaddr clientaddr("127.0.0.1", 1234);
+    clientsock.connect(clientaddr);
+    string cmd;
+    Session scmd(clientaddr, clientsock, CLOSEMODE::ACTIVE);
 
-
-    clientsock.shutdown(SD_WR);
-    clientsock.read(0, 0);
-    clientsock.close();
+    while(scmd.recvmsg(cmd) > 0) {
+        if(cmd == "BYE") break;
+        getline(cin, cmd);
+        scmd.sendmsg(cmd);
+    }
 }

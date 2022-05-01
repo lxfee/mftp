@@ -8,8 +8,6 @@
 #include <iostream>
 #include "socket.h"
 
-#define panic(msg) std::cerr << msg << std::endl; assert(0)
-
 struct SOCK {
     SOCK(int sock) : sock(sock) {}
     int sock;
