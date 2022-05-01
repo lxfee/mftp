@@ -4,10 +4,12 @@
 #include <fstream>
 
 using namespace std;
+#define CMDPORT  1141
+#define DATAPORT 514
 
 int main() {
     Socket clientsock;
-    Ipaddr clientaddr("127.0.0.1", 1234);
+    Ipaddr clientaddr("127.0.0.1", CMDPORT);
     clientsock.connect(clientaddr);
     string cmd;
     Session scmd(clientaddr, clientsock, CLOSEMODE::ACTIVE);

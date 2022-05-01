@@ -3,7 +3,7 @@
 #include "session.h"
 #include <map>
 
-#define CMDPORT  114
+#define CMDPORT  1141
 #define DATAPORT 514
 #define cmderror(respond) {scmd.sendmsg(respond); return -1;} 
 

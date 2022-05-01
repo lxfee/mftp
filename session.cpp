@@ -1,7 +1,8 @@
 #include "session.h"
-#include <iostream>
+#include "logger.hpp"
 #include <algorithm>
 #include <exception>
+#include <iostream>
 
 Session::Session(const Ipaddr& addr, const Socket& sock, CLOSEMODE mode) : addr(addr), sock(sock), mode(mode) {}
 
@@ -20,12 +21,12 @@ Session::~Session() {
         sock.shutdown(SD_WR);
         wait();
     }
+    logger("Session closed", addr.port);
     sock.close();
 }
 
 void Session::sendmsg(const std::string& msg) {
-    std::cout << "SEND: " << msg << std::endl;
-
+    logger("SEND: " + msg, addr.port);
     std::string tmsg = msg;
     if(tmsg.back() != '\n') tmsg.push_back('\n'); // 换行符为结尾
     if(sock.write(tmsg.c_str(), tmsg.size()) < 0) {
@@ -48,16 +49,14 @@ void Session::sendstream(std::istream& is) {
 }
 
 void Session::recvmsg(std::string& msg) {
-    std::cout << "RECV: ";
-
     msg.clear();
     char ch;
     int nbytes;
-    while((nbytes = sock.read(&ch, 1)) >= 0) {
+    while((nbytes = sock.read(&ch, 1)) > 0) {
         if(ch == '\n') break;
         msg.push_back(ch);
     }
-    std::cout << msg << std::endl;
+    logger("RECV: " + msg, addr.port);
     if(nbytes <= 0) {
         throw "session closed";
     }

@@ -3,6 +3,7 @@
 #include <string>
 #define BUFFER_SIZE 512
 enum CLOSEMODE {ACTIVE, PASSIVE};
+
 class Session {
 public:
     Session(const Ipaddr& addr, const Socket& sock, CLOSEMODE mode);

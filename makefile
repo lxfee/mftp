@@ -1,8 +1,8 @@
 idir = include
-objs = SocketLinux.o session.o
+objs = SocketLinux.o session.o 
 
 test: test.o $(objs) server.o
-	g++ -g test.o $(objs) server.o -o test -lpthread
+	g++ -g $(objs) test.o server.o -o test -lpthread
 
 test.o : test.cpp
 	g++ -I$(idir)  -c -g test.cpp
