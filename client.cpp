@@ -28,7 +28,7 @@ Session buildstream(Session& scmd) {
         Ipaddr local = scmd.getlocaladdr();
         local.port = 0;
 
-        Session session = Session::buildsession(target, local, PASSIVE);
+        Session session = Session::buildsession(target, local, ACTIVE);
         return std::move(session);
 
     } else {//if(cmd == "PASV") {
@@ -43,7 +43,7 @@ Session buildstream(Session& scmd) {
         session.listen(1);
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
         logger("waiting");
-        Session dsession = session.accept(1, PASSIVE);
+        Session dsession = session.accept(1, ACTIVE);
         logger("done");
         if(dsession.status() < 0) {
         }
@@ -71,7 +71,7 @@ int main() {
         getline(cin, cmd);
         scmd.sendmsg(cmd);
         if(cmd == "BYE") break;
-        if(cmd == "LIST") {
+        if(cmd == "PASV") {
             Session d = buildstream(scmd);
             if(!d.status()) {
                 logger("build data session error", "ERROR");

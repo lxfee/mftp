@@ -55,17 +55,36 @@ void Session::sendmsg(const std::string& msg) {
 }
 
 
-void Session::sendstream(std::istream& is) {
+// size = 0代表保持发送，直到会话被关闭
+void Session::sendstream(std::istream& is, int size) {
+    // 发送待发送的字节数
+    sock.write(&size, 4);
     char buffer[BUFFER_SIZE];
-    int nbytes;
-    do {
-        is.read(buffer, sizeof(buffer));
-        nbytes = is.gcount();
-        if(sock.write(buffer, nbytes) < 0) {
-            throw "session closed";
-        }
-    } while(nbytes);
     
+
+    if(size == 0) {
+        int nbytes = sizeof(buffer);
+        // 发到流发完为止
+        do {
+            is.read(buffer, sizeof(buffer));
+            nbytes = is.gcount();
+            if(sock.write(buffer, nbytes) < 0) {
+                throw "session closed";
+            }
+        } while(nbytes);
+    } else {
+        int nbytes = std::min((int)sizeof(buffer), size);
+        // 发送特定数量字节
+        do {
+            is.read(buffer, nbytes);
+            nbytes = is.gcount();
+            if(sock.write(buffer, nbytes) < 0) {
+                throw "session closed";
+            }
+            size -= nbytes;
+            nbytes = std::min(size, nbytes);
+        } while(nbytes);
+    }
 }
 
 void Session::recvmsg(std::string& msg) {
@@ -83,10 +102,28 @@ void Session::recvmsg(std::string& msg) {
 }
 
 void Session::recvstream(std::ostream& os) {
+    // 接收字节数
+    int size;
+    sock.read(&size, 4);
+    
+    // 接收数据
     char buffer[BUFFER_SIZE];
-    int nbytes;
-    while((nbytes = sock.read(buffer, sizeof(buffer))) > 0) {
-        os.write(buffer, nbytes);
+    int nbytes = std::min(size, (int)sizeof(buffer));
+
+    
+    if(size == 0) {
+        // 未指明数据大小
+        while((nbytes = sock.read(buffer, sizeof(buffer))) > 0) {
+            os.write(buffer, nbytes);
+        }
+    } else {
+        // 接收特定数量字节
+        while((nbytes = sock.read(buffer, nbytes)) > 0) {
+            os.write(buffer, nbytes);
+            size -= nbytes;
+            nbytes = std::min(size, (int)sizeof(buffer));
+            if(!nbytes) break;
+        }
     }
     if(nbytes < 0) {
         throw "session closed";

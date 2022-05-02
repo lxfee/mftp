@@ -119,7 +119,7 @@ ServerConfig Server::config;
 
 void Server::operator()(Session& scmd) {
     // init
-    if(!login(scmd)) return ;
+    // if(!login(scmd)) return ;
 
     std::string cmd;
     while(1) {
@@ -179,7 +179,7 @@ void Server::list(Session& scmd) {
     if(!datasession.status()) return ;
 
     scmd.sendmsg("Start send binary stream");
-    datasession.sendstream(ss);
+    datasession.sendstream(ss, listinfo.size());
 
 }
 
@@ -196,7 +196,7 @@ Session Server::buildstream(Session& scmd) {
         
         Ipaddr local = scmd.getlocaladdr();
         local.port++; // 数据端口 = 命令端口 + 1
-        Session session = Session::buildsession(target, local, ACTIVE);
+        Session session = Session::buildsession(target, local, PASSIVE);
         if(!session.status()) {
             scmd.sendmsg("ERR: can not build data connection");
         }
@@ -215,7 +215,7 @@ Session Server::buildstream(Session& scmd) {
         session.listen(1);
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
 
-        Session dsession = session.accept(5, ACTIVE);
+        Session dsession = session.accept(5, PASSIVE);
         if(dsession.status() < 0) {
             scmd.sendmsg("ERR: data connection time out");
         }

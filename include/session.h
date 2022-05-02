@@ -24,8 +24,8 @@ public:
     
 
     void sendmsg(const std::string& msg);
-    void sendstream(std::istream& os);
     void recvmsg(std::string& smg);
+    void sendstream(std::istream& os, int size = 0);
     void recvstream(std::ostream& is);
 
     void gettok(std::string& cmd);
