@@ -38,6 +38,8 @@ Session::~Session() {
             sock.shutdown(SD_WR);
             wait();
             break;
+        case CLOSE:
+            break;
         case NOTCLOSE:
         default:
             return ;
@@ -144,6 +146,11 @@ bool Session::status() {
     if(buildstatus < 0) return false;
     return true;
 }
+
+Session Session::nullsession() {
+    return std::move(Session());
+}
+
 Session Session::buildtargetsession(Ipaddr target, CLOSEMODE mode) {
     Session session;
     Socket sock;
@@ -226,9 +233,10 @@ Session Session::accept(int sec) {
     return std::move(session);
 }
 
-int Session::getlocalport() {
-    if(status()) {
-        return local.port;
-    }
-    return -1;
+Ipaddr Session::getlocaladdr() {
+    return local;
+}
+
+Ipaddr Session::gettargetaddr() {
+    return target;
 }

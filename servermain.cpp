@@ -53,7 +53,7 @@ void serverthread(Session scmd) {
 
 
 int main() {
-    Session localsession = Session::buildlocalsession(Server::config.addr, ACTIVE);
+    Session localsession = Session::buildlocalsession(Server::config.addr, CLOSE);
     
     if(!localsession.status()) {
         logger("Start failed");
@@ -63,8 +63,8 @@ int main() {
     logger("Server listening on 0.0.0.0", Server::config.addr.port);
     
 
-    thread tmpth(printthread);
-    tmpth.detach();
+    // thread tmpth(printthread);
+    // tmpth.detach();
 
     while(1) {
         Session clientsession = localsession.accept();

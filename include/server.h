@@ -21,7 +21,7 @@ public:
 private:
     bool login(Session& scmd);
     void list(Session& scmd);
-    // SessionPtr buildStreamTp(Session& scmd);
+    Session buildstream(Session& scmd);
     std::string user;
     std::string passwd;
 };

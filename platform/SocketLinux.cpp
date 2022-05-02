@@ -42,10 +42,10 @@ static int shutdownCv(ShutdownType howto) {
 }
 
 static void addrCv(const Ipaddr& ipaddr, sockaddr* addr) {
+    memset(addr, 0, sizeof(sockaddr));
     sockaddr_in *serv_addr = (sockaddr_in *)addr;
     switch(ipaddr.ipType) {
         case IPV4:
-            memset(serv_addr, 0, sizeof(sockaddr));                         //每个字节都用0填充
             serv_addr->sin_family = ipTypeCv(ipaddr.ipType);                //使用IPv4地址
             serv_addr->sin_addr.s_addr = inet_addr(ipaddr.addr.c_str());    //具体的IP地址
             serv_addr->sin_port = htons(ipaddr.port);                       //端口
@@ -81,7 +81,8 @@ Socket::Socket(Protocol protocol, Iptype ipType) : protocol(protocol), ipType(ip
 int Socket::bind(const Ipaddr& addr) {
     sockaddr serv_addr;
     addrCv(addr, &serv_addr);
-    return ::bind(sock, &serv_addr, sizeof(sockaddr));
+
+    return ::bind(sock, &serv_addr, sizeof(sockaddr_in));
 }
 
 int Socket::connect(const Ipaddr& addr) {
@@ -96,6 +97,9 @@ int Socket::getsockname(Ipaddr& ipaddr) {
     socklen_t socklen;
     // 如果绑定时设置了端口号为0，用这个获得绑定的地址从而获得系统随机分配的端口号
     int flag = ::getsockname(sock, &addr, &socklen);
+    logger(sock, "sock");
+    logger(flag, "flag");
+    logger(ntohs(((sockaddr_in*)&addr)->sin_port), "port");
     if(flag < 0) return flag;
     addrCv(&addr, ipaddr);
     return flag;

@@ -3,18 +3,20 @@
 #include <string>
 #include <memory>
 #define BUFFER_SIZE 512
-enum CLOSEMODE {ACTIVE, PASSIVE, NOTCLOSE};
+enum CLOSEMODE {ACTIVE, PASSIVE, CLOSE, NOTCLOSE};
 
 class Session {
 public:
     static Session buildtargetsession(Ipaddr target, CLOSEMODE mode);
     static Session buildlocalsession(Ipaddr local, CLOSEMODE mode);
     static Session buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode);
-    
+    static Session nullsession();
+
     int bind(Ipaddr local);
     int listen(int backlog);
     Session accept(int sec = 0);
-    int getlocalport();
+    Ipaddr getlocaladdr();
+    Ipaddr gettargetaddr();
 
     Session(const Session &) = delete;
     Session(Session &&);
