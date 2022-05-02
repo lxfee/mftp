@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <sstream>
 #include "logger.hpp"
+#include "utils.h"
 
 /***********************server config****************************/
 
@@ -80,6 +81,10 @@ bool ServerConfig::loadconfig(std::string filename) {
         logger("lack path!", "Server Config");
         return false;
     }
+    if(!direxists(loadedpath)) {
+        logger("can not open dir!", "Server Config");
+        return false;
+    }
 
     if(info.contains("users")) {
         for(auto& user : info["users"].items()) {
@@ -130,57 +135,47 @@ void Server::operator()(Session& scmd) {
             scmd.sendmsg("BYE");
             break;
         }
-        else 
-        if(cmd == "LIST") {
+        else if(cmd == "LIST") {
             list(scmd);
             scmd.sendmsg("DONE");
         }
-        else
-        if(cmd == "GET") {
+        else if(cmd == "GET") {
 
         }
-        else
-        if(cmd == "PUT") {
+        else if(cmd == "PUT") {
 
         }
-        else 
-        {
+        else if(cmd == "TIME") {
+            scmd.sendmsg(getcurrenttime());
+        } 
+        else if(cmd == "HELLO") {
+            scmd.sendmsg("HELLO");
+        }
+        
+        else {
             scmd.sendmsg("ERR: unknown cmd");
         }
     }
 }
 
-bool getlistinfo(std::string path, std::string &listinfo) {
-    std::string test;
-    test += "123\n";
-    test += "123\n";
-    test += "123\n";
-    test += "123\n";
-    test += "123\n";
-    test += "123\n";
-    listinfo = test;
-    return true;
-}
+
 
 void Server::list(Session& scmd) {
     std::string path;
     scmd.gettok(path);
 
-    std::string listinfo;
-    
-    if(getlistinfo(path, listinfo)) {
+    std::stringstream listinfo;
+    if(getlist(path, listinfo)) {
         scmd.sendmsg("OK");
     } else {
         scmd.sendmsg("ERR: Path not exisit");
         return ;
     }
-    std::stringstream ss(listinfo);
     Session datasession = buildstream(scmd);
     if(!datasession.status()) return ;
 
     scmd.sendmsg("Start send binary stream");
-    datasession.sendstream(ss, listinfo.size());
-
+    datasession.sendstream(listinfo, listinfo.tellp());
 }
 
 Session Server::buildstream(Session& scmd) {
@@ -230,23 +225,26 @@ Session Server::buildstream(Session& scmd) {
 
 bool Server::login(Session& scmd) {
     std::string cmd;
-    scmd.sendmsg("LOGIN");
+    scmd.sendmsg("登录");
 
     // USER
     scmd.nextline();
     scmd.gettok(cmd);
 
     if(cmd != "USER") {
-        scmd.sendmsg("ERR: request error");
+        scmd.sendmsg("ERR: expect USER, connect shut");
+        scmd.close();
         return false;
     }
     scmd.gettok(cmd);
     if(cmd == "anonymous" && !config.allowAnonymous){
-        scmd.sendmsg("ERR: request error");
+        scmd.sendmsg("ERR: anonymous is not allow, connect shut");
+        scmd.close();
         return false;
     }
     if(cmd != "anonymous" && !config.users.count(cmd)) {
-        scmd.sendmsg("ERR: user not exist!");
+        scmd.sendmsg("ERR: user not exist, connect shut");
+        scmd.close();
         return false;
     }
     user = cmd;
@@ -257,12 +255,14 @@ bool Server::login(Session& scmd) {
     scmd.nextline();
     scmd.gettok(cmd);
     if(cmd != "PASSWORD") {
-        scmd.sendmsg("ERR: request error");
+        scmd.sendmsg("ERR: expect PASSWORD, connect shut");
+        scmd.close();
         return false;
     }
     scmd.gettok(cmd);
     if(user != "anonymous" && config.users.at(user) != cmd)  {
-        scmd.sendmsg("ERR: authentication failed");
+        scmd.sendmsg("ERR: authentication failed, connect shut");
+        scmd.close();
         return false;
     }
     passwd = cmd;

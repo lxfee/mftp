@@ -4,6 +4,8 @@
 #include <exception>
 #include <iostream>
 
+#define error(msg) {buildstatus = -1; throw msg;}
+
 int Session::wait() {
     int nbytes;
     char ch;
@@ -41,8 +43,25 @@ Session::~Session() {
         default:
             return ;
     }
-    logger("Session closed", target.port);
     sock.close();
+    logger("Session closed", target.port);
+}
+
+void Session::close() {
+    switch (mode) {
+        case CLOSE:
+            break;
+        case NOTCLOSE:
+            return ;
+        default:
+            sock.shutdown(SD_WR);
+            wait();
+            break;
+    }
+    sock.close();
+    mode = NOTCLOSE;
+    buildstatus = -1;
+    logger("Session closed", target.port);
 }
 
 void Session::sendmsg(const std::string& msg) {
@@ -50,7 +69,7 @@ void Session::sendmsg(const std::string& msg) {
     std::string tmsg = msg;
     if(tmsg.back() != '\n') tmsg.push_back('\n'); // 换行符为结尾
     if(sock.write(tmsg.c_str(), tmsg.size()) < 0) {
-        throw "session closed";
+        error("session closed");
     }
 }
 
@@ -69,7 +88,7 @@ void Session::sendstream(std::istream& is, int size) {
             is.read(buffer, sizeof(buffer));
             nbytes = is.gcount();
             if(sock.write(buffer, nbytes) < 0) {
-                throw "session closed";
+                error("session closed");
             }
         } while(nbytes);
     } else {
@@ -79,13 +98,14 @@ void Session::sendstream(std::istream& is, int size) {
             is.read(buffer, nbytes);
             nbytes = is.gcount();
             if(sock.write(buffer, nbytes) < 0) {
-                throw "session closed";
+                error("session closed");
             }
             size -= nbytes;
             nbytes = std::min(size, nbytes);
         } while(nbytes);
     }
 }
+
 
 void Session::recvmsg(std::string& msg) {
     msg.clear();
@@ -97,7 +117,7 @@ void Session::recvmsg(std::string& msg) {
     }
     logger("RECV: " + msg, target.port);
     if(nbytes <= 0) {
-        throw "session closed";
+        error("session closed");
     }
 }
 
@@ -126,7 +146,7 @@ void Session::recvstream(std::ostream& os) {
         }
     }
     if(nbytes < 0) {
-        throw "session closed";
+        error("session closed");
     }
 }
 
@@ -145,13 +165,17 @@ void Session::gettok(std::string& cmd) {
     }
 }
 
+void Session::readline(std::string& cmd) {
+    cmd = buffer;
+    std::reverse(cmd.begin(), cmd.end());
+}
+
 void Session::nextline() {
     recvmsg(buffer);
     std::reverse(buffer.begin(), buffer.end());
 }
 
-
-// 只是判断会话是否建立成功而已
+// 判断会话是否有效
 bool Session::status() {
     if(buildstatus < 0) return false;
     return true;
@@ -188,7 +212,6 @@ Session Session::buildlocalsession(Ipaddr local, CLOSEMODE mode) {
     sock.getsockname(session.local);
     session.sock = sock;
     return std::move(session);
-
 }
 
 
@@ -210,7 +233,9 @@ Session Session::buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
     session.sock = sock;
     return std::move(session);
 }
-    
+
+
+
 int Session::bind(Ipaddr local) {
     int flag = sock.bind(local);
     if(flag < 0) {

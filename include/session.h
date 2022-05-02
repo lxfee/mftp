@@ -12,8 +12,11 @@ public:
     static Session buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode);
     static Session nullsession();
 
+    
+
     int bind(Ipaddr local);
     int listen(int backlog);
+    void close();
     Session accept(int sec = 0, CLOSEMODE mode = PASSIVE);
     Ipaddr getlocaladdr();
     Ipaddr gettargetaddr();
@@ -29,6 +32,7 @@ public:
     void recvstream(std::ostream& is);
 
     void gettok(std::string& cmd);
+    void readline(std::string& cmd);
     void nextline();
 
     bool status();
