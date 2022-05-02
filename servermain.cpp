@@ -2,13 +2,22 @@
 #include <server.h>
 #include <thread>
 #include <mutex>
+#include <ctime>
 #include "logger.hpp"
+#include<unistd.h>
 using namespace std;
 
-#define MAX_CONNECTIONS 2
+#define MAX_CONNECTIONS 5
 
 mutex mutx;
 int runningthread = 0;
+
+void printthread() {
+    while(1) {
+        sleep(1);
+        logger(runningthread, "Thread Printer");
+    }
+}
 
 bool incthread() {
     bool flag = false;
@@ -27,8 +36,7 @@ void decthread() {
     mutx.unlock();
 }
 
-void serverthread(Ipaddr addr, Socket sock) {
-    Session scmd(addr, sock, CLOSEMODE::PASSIVE);
+void serverthread(Session scmd) {
     if(!incthread()) {
         scmd.sendmsg("ERR: too many connections");
         return ;
@@ -45,23 +53,23 @@ void serverthread(Ipaddr addr, Socket sock) {
 
 
 int main() {
-    Socket servsock;
-    if(servsock.bind(Server::config.addr) < 0) {
+    Session localsession = Session::buildlocalsession(Server::config.addr, ACTIVE);
+    
+    if(!localsession.status()) {
         logger("Start failed");
         return 1;
     } 
-    servsock.listen(MAX_CONNECTIONS);
-    
+    localsession.listen(MAX_CONNECTIONS);
     logger("Server listening on 0.0.0.0", Server::config.addr.port);
     
-    Ipaddr clientaddr;
-    Socket clientsock;
+
+    thread tmpth(printthread);
+    tmpth.detach();
 
     while(1) {
-        if(servsock.accept(clientaddr, clientsock) < 0) break;
-        thread th(serverthread, clientaddr, clientsock);
+        Session clientsession = localsession.accept();
+        if(!clientsession.status()) break;
+        thread th(serverthread, std::move(clientsession));
         th.detach();
     }
-    
-    servsock.close();
 }

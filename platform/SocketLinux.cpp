@@ -9,11 +9,6 @@
 #include "socket.h"
 #include "logger.hpp"
 
-struct SOCK {
-    SOCK(int sock) : sock(sock) {}
-    int sock;
-};
-
 static int protocolCv(Protocol protocol) {
     switch(protocol) {
         case P_TCP: return SOCK_STREAM;
@@ -50,10 +45,10 @@ static void addrCv(const Ipaddr& ipaddr, sockaddr* addr) {
     sockaddr_in *serv_addr = (sockaddr_in *)addr;
     switch(ipaddr.ipType) {
         case IPV4:
-            memset(serv_addr, 0, sizeof(sockaddr));  //每个字节都用0填充
-            serv_addr->sin_family = ipTypeCv(ipaddr.ipType);  //使用IPv4地址
-            serv_addr->sin_addr.s_addr = inet_addr(ipaddr.addr.c_str());  //具体的IP地址
-            serv_addr->sin_port = htons(ipaddr.port);  //端口
+            memset(serv_addr, 0, sizeof(sockaddr));                         //每个字节都用0填充
+            serv_addr->sin_family = ipTypeCv(ipaddr.ipType);                //使用IPv4地址
+            serv_addr->sin_addr.s_addr = inet_addr(ipaddr.addr.c_str());    //具体的IP地址
+            serv_addr->sin_port = htons(ipaddr.port);                       //端口
             break;
         default:
             panic("addrcv ip to addr error");
@@ -72,13 +67,16 @@ static void addrCv(const sockaddr* addr, Ipaddr& ipaddr) {
     }
 }
 
+Ipaddr::Ipaddr() : addr("0.0.0.0"), port(0), ipType(IPV4) {}
+
+Ipaddr::Ipaddr(const std::string &addr, int port, Iptype ipType) : addr(addr), port(port), ipType(ipType) {}
+
 Socket::Socket(Protocol protocol, Iptype ipType) : protocol(protocol), ipType(ipType) {
     int af = ipTypeCv(ipType), type = protocolCv(protocol);
     sock = socket(af, type, 0);
 }
 
-Ipaddr::Ipaddr(const std::string &addr, int port, Iptype ipType) : addr(addr), port(port), ipType(ipType) {}
-Ipaddr::Ipaddr() = default;
+
 
 int Socket::bind(const Ipaddr& addr) {
     sockaddr serv_addr;
@@ -96,12 +94,11 @@ int Socket::connect(const Ipaddr& addr) {
 int Socket::getsockname(Ipaddr& ipaddr) {
     struct sockaddr addr;
     socklen_t socklen;
-    // 如果绑定时设置了端口号为0,用这个获得绑定的地址从而获得系统随机分配的端口号
-    int res = ::getsockname(sock, &addr, &socklen);
-    
-    if(res < 0) return res;
+    // 如果绑定时设置了端口号为0，用这个获得绑定的地址从而获得系统随机分配的端口号
+    int flag = ::getsockname(sock, &addr, &socklen);
+    if(flag < 0) return flag;
     addrCv(&addr, ipaddr);
-    return res;
+    return flag;
 }
 
 int Socket::setsendtimeout(int sec) {
@@ -111,6 +108,7 @@ int Socket::setsendtimeout(int sec) {
     socklen_t len = sizeof(timeout);
 	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, len);
 }
+
 int Socket::setrecvtimeout(int sec) {
     struct timeval timeout;
     timeout.tv_sec = sec;
@@ -146,7 +144,6 @@ int Socket::write(const void* buf, size_t nbytes) {
     return ::write(sock, buf, nbytes);
 }
 
-
 int Socket::close() {
     return ::close(sock);
 }
@@ -154,17 +151,17 @@ int Socket::close() {
 int Socket::recvfrom(void* buf, size_t nbytes, Ipaddr& from) {
     sockaddr fromAddr;
     socklen_t addrLen = sizeof(sockaddr);
-    int res = ::recvfrom(sock, buf, nbytes, 0, &fromAddr, &addrLen);
+    int flag = ::recvfrom(sock, buf, nbytes, 0, &fromAddr, &addrLen);
+    if(flag < 0) return flag;
     addrCv(&fromAddr, from);
-    return res;
+    return flag;
 }
 
 int Socket::sendto(void *buf, size_t nbytes, const Ipaddr& to) {
     sockaddr toAddr;
     addrCv(to, &toAddr);
     socklen_t addrLen = sizeof(sockaddr);
-    int res = ::sendto(sock, buf, nbytes, 0, &toAddr, addrLen);
-    return res;
+    return ::sendto(sock, buf, nbytes, 0, &toAddr, addrLen);
 }
 
 

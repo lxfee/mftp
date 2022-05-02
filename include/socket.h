@@ -1,11 +1,8 @@
 #pragma once
 #include <string>
 #include <memory>
-#define _LINUX 0
-#ifdef _LINUX
-	using SOCK_T = int;
-#endif
 
+using SOCK_T = int;
 
 #define panic(msg) std::cerr << msg << std::endl; assert(0)
 
@@ -18,7 +15,7 @@ struct Ipaddr {
 	Ipaddr(const std::string &addr, int port, Iptype ipType = IPV4);
 	std::string addr;
 	int port;
-	Iptype ipType; // IPV4
+	Iptype ipType;
 };
 
 class Socket {
@@ -39,7 +36,7 @@ public:
 	int setrecvtimeout(int sec);
 	
 private:
-	SOCK_T sock;
-	Iptype ipType; // IPV4
-	Protocol protocol; // P_TCP, P_UDP
+	SOCK_T sock;		// sock套接字
+	Iptype ipType; 		// IP类型：IPV4
+	Protocol protocol; 	// 传输协议：P_TCP, P_UDP
 };

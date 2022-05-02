@@ -8,6 +8,8 @@
 #include <sstream>
 #include "logger.hpp"
 
+/***********************server config****************************/
+
 using json = nlohmann::json;
 
 // only support ipv4
@@ -113,13 +115,16 @@ bool ServerConfig::loadconfig(std::string filename) {
 
 ServerConfig Server::config; 
 
+
+/***********************server****************************/
+
 void Server::operator()(Session& scmd) {
     // init
     if(!login(scmd)) return ;
 
     std::string cmd;
     while(1) {
-        scmd.readcmd();
+        scmd.nextline();
         scmd.gettok(cmd);
 
         if(cmd == "BYE") {
@@ -159,84 +164,85 @@ bool getlistinfo(std::string path, std::string &listinfo) {
 }
 
 void Server::list(Session& scmd) {
-    std::string path;
-    scmd.gettok(path);
-    std::string listinfo;
-    if(getlistinfo(path, listinfo)) {
-        scmd.sendmsg("OK");
-    } else {
-        scmd.sendmsg("ERR: Path not exisit");
-        return ;
-    }
-    std::stringstream ss(listinfo);
-    SessionPtr datasession = buildStreamTp(scmd);
-    if(datasession == nullptr) {
-        return ;
-    }
-    scmd.sendmsg("Start send binary stream");
-    datasession->sendstream(ss);      
+    // std::string path;
+    // scmd.gettok(path);
+    // std::string listinfo;
+    // if(getlistinfo(path, listinfo)) {
+    //     scmd.sendmsg("OK");
+    // } else {
+    //     scmd.sendmsg("ERR: Path not exisit");
+    //     return ;
+    // }
+    // std::stringstream ss(listinfo);
+    // SessionPtr datasession = buildStreamTp(scmd);
+    // if(datasession == nullptr) {
+    //     return ;
+    // }
+    // scmd.sendmsg("Start send binary stream");
+    // datasession->sendstream(ss);      
 }
 
-SessionPtr Server::buildStreamTp(Session& scmd) {
-    std::string cmd;
-    scmd.readcmd();
-    scmd.gettok(cmd);
-    if(cmd == "PORT") {
-        scmd.gettok(cmd);
-        Ipaddr clientaddr = scmd.addr;
-        clientaddr.port = atoi(cmd.c_str()); 
+// SessionPtr Server::buildStreamTp(Session& scmd) {
+//     std::string cmd;
+//     scmd.readcmd();
+//     scmd.gettok(cmd);
+//     if(cmd == "PORT") {
+//         scmd.gettok(cmd);
+//         Ipaddr clientaddr = scmd.addr;
+//         clientaddr.port = atoi(cmd.c_str()); 
         
-        Ipaddr servaddr;
-        scmd.sock.getsockname(servaddr);
-        servaddr.port++; // 数据端口 = 命令端口 + 1
+//         Ipaddr servaddr;
+//         scmd.sock.getsockname(servaddr);
+//         servaddr.port++; // 数据端口 = 命令端口 + 1
 
-        Socket servsock;
+//         Socket servsock;
         
-        servsock.bind(servaddr);
-        servsock.connect(clientaddr);
+//         servsock.bind(servaddr);
+//         servsock.connect(clientaddr);
 
-        if(servsock.bind(servaddr) < 0 || servsock.connect(clientaddr) < 0) {
-            scmd.sendmsg("ERR: can not build data connection");
-            return nullptr;
-        }
-        // 建立会话
-        return std::move(std::make_unique<Session>(clientaddr ,servsock, PASSIVE));
-    } else if(cmd == "PASV") {
-        Socket servsock;
-        Ipaddr saddr;
-        scmd.sock.getsockname(saddr);
-        saddr.port = 0;
-        if(servsock.bind(saddr) < 0) {
-            scmd.sendmsg("ERR: can not build data connection");
-            return nullptr;
-        }
-        scmd.sock.getsockname(saddr);
-        servsock.listen(1);
-        scmd.sendmsg("PORT " + std::to_string(saddr.port));
-        Ipaddr clientaddr;
-        Socket clientsock;
-        servsock.setrecvtimeout(5);
-        if(servsock.accept(clientaddr, clientsock) < 0) {
-            scmd.sendmsg("ERR: data connection time out");
-            return nullptr;
-        }
-        servsock.close();
+//         if(servsock.bind(servaddr) < 0 || servsock.connect(clientaddr) < 0) {
+//             scmd.sendmsg("ERR: can not build data connection");
+//             return nullptr;
+//         }
+//         // 建立会话
+//         return std::move(std::make_unique<Session>(clientaddr ,servsock, PASSIVE));
+//     } else if(cmd == "PASV") {
+//         Socket servsock;
+//         Ipaddr saddr;
+//         scmd.sock.getsockname(saddr);
+//         saddr.port = 0;
+//         if(servsock.bind(saddr) < 0) {
+//             scmd.sendmsg("ERR: can not build data connection");
+//             return nullptr;
+//         }
+//         scmd.sock.getsockname(saddr);
+//         servsock.listen(1);
+//         scmd.sendmsg("PORT " + std::to_string(saddr.port));
+//         Ipaddr clientaddr;
+//         Socket clientsock;
+//         servsock.setrecvtimeout(5);
+//         if(servsock.accept(clientaddr, clientsock) < 0) {
+//             scmd.sendmsg("ERR: data connection time out");
+//             return nullptr;
+//         }
+//         servsock.close();
         
-        // 建立会话
-        return std::move(std::make_unique<Session>(clientaddr ,clientsock, PASSIVE));
-    } else {
-        scmd.sendmsg("ERR: do not know which way");
-        return nullptr;
-    }
-}
+//         // 建立会话
+//         return std::move(std::make_unique<Session>(clientaddr ,clientsock, PASSIVE));
+//     } else {
+//         scmd.sendmsg("ERR: do not know which way");
+//         return nullptr;
+//     }
+// }
 
 bool Server::login(Session& scmd) {
     std::string cmd;
     scmd.sendmsg("LOGIN");
 
     // USER
-    scmd.readcmd();
+    scmd.nextline();
     scmd.gettok(cmd);
+
     if(cmd != "USER") {
         scmd.sendmsg("ERR: request error");
         return false;
@@ -255,7 +261,7 @@ bool Server::login(Session& scmd) {
     
     
     // PASSWORD 
-    scmd.readcmd();
+    scmd.nextline();
     scmd.gettok(cmd);
     if(cmd != "PASSWORD") {
         scmd.sendmsg("ERR: request error");

@@ -4,34 +4,50 @@
 #include <exception>
 #include <iostream>
 
-Session::Session(const Ipaddr& addr, const Socket& sock, CLOSEMODE mode) {
-    this->addr = addr;
-    this->sock = sock;
-    this->mode = mode;
-}
-
 int Session::wait() {
-    char buffer[BUFFER_SIZE];
     int nbytes;
-    while((nbytes = sock.read(buffer, sizeof buffer)) > 0);
+    char ch;
+    while((nbytes = sock.read(&ch, 1)) > 0);
     return nbytes;
 }
+Session::Session() : mode(NOTCLOSE), buildstatus(-1), eoftag(true) {}
+
+Session::Session(Session && session) {
+    target = session.target;
+    local = session.local;
+    sock = session.sock;
+    mode = session.mode;
+    eoftag = session.eoftag;
+    buildstatus = session.buildstatus;
+
+    session.eoftag = true;
+    session.mode = NOTCLOSE;
+    session.buildstatus = -1;
+}
+
+
 
 Session::~Session() {
-    if(mode == CLOSEMODE::PASSIVE) {
-        logger("Wait session closed", addr.port);
-        wait();
-        sock.shutdown(SD_WR);
-    } else {
-        sock.shutdown(SD_WR);
-        wait();
+    switch (mode) {
+        case PASSIVE:
+            logger("Wait session closed", target.port);
+            wait();
+            sock.shutdown(SD_WR);
+            break;
+        case ACTIVE:
+            sock.shutdown(SD_WR);
+            wait();
+            break;
+        case NOTCLOSE:
+        default:
+            return ;
     }
-    logger("Session closed", addr.port);
+    logger("Session closed", target.port);
     sock.close();
 }
 
 void Session::sendmsg(const std::string& msg) {
-    logger("SEND: " + msg, addr.port);
+    logger("SEND: " + msg, target.port);
     std::string tmsg = msg;
     if(tmsg.back() != '\n') tmsg.push_back('\n'); // 换行符为结尾
     if(sock.write(tmsg.c_str(), tmsg.size()) < 0) {
@@ -61,7 +77,7 @@ void Session::recvmsg(std::string& msg) {
         if(ch == '\n') break;
         msg.push_back(ch);
     }
-    logger("RECV: " + msg, addr.port);
+    logger("RECV: " + msg, target.port);
     if(nbytes <= 0) {
         throw "session closed";
     }
@@ -80,18 +96,139 @@ void Session::recvstream(std::ostream& os) {
 
 void Session::gettok(std::string& cmd) {
     cmd.clear();
-    while(!buffercmd.empty()) {
-        if(isspace(buffercmd.back())) buffercmd.pop_back();
-        else break;
+    if(eoftag) return ;
+    int nbytes;
+    char ch;
+    while((nbytes = sock.read(&ch, 1)) > 0) {
+        if(ch == '\n') {
+            eoftag = true;
+            break;
+        }
+        if(!isspace(ch)) break;
     }
-    while(!buffercmd.empty()) {
-        if(isspace(buffercmd.back())) break;
-        cmd.push_back(buffercmd.back());
-        buffercmd.pop_back();
+    if(nbytes <= 0)  {
+        throw "session closed";
+    }
+    if(eoftag) return ;
+    cmd.push_back(ch);
+    while((nbytes = sock.read(&ch, 1)) > 0) {
+        if(ch == '\n') {
+            eoftag = true;
+            break;
+        }
+        if(isspace(ch)) break;
+        cmd.push_back(ch);
+    }
+    if(nbytes <= 0)  {
+        throw "session closed";
+    }
+    logger("RECV TOKEN: " + cmd, target.port);
+}
+
+void Session::nextline() {
+    if(eoftag) {
+        eoftag = false;
+        return ;
+    }
+    int nbytes;
+    char ch;
+    while((nbytes = sock.read(&ch, 1)) > 0) {
+        if(ch == '\n') {
+            break;
+        }
     }
 }
 
-void Session::readcmd() {
-    recvmsg(buffercmd);
-    std::reverse(buffercmd.begin(), buffercmd.end());
+// no sure if it can work
+bool Session::status() {
+    if(buildstatus < 0) return false;
+    return true;
+}
+Session Session::buildtargetsession(Ipaddr target, CLOSEMODE mode) {
+    Session session;
+    Socket sock;
+    int flag = sock.connect(target);
+    session.buildstatus = flag;
+    if(flag < 0) {
+        return std::move(session);
+    }
+    session.mode = mode;
+    session.target = target;
+    sock.getsockname(session.local);
+    session.sock = sock;
+    return std::move(session);
+}
+
+Session Session::buildlocalsession(Ipaddr local, CLOSEMODE mode) {
+    Session session;
+    Socket sock;
+    int flag = sock.bind(local);
+    session.buildstatus = flag;
+    if(flag < 0) {
+        return std::move(session);
+    }
+    session.mode = mode;
+    sock.getsockname(session.local);
+    session.sock = sock;
+    return std::move(session);
+
+}
+
+
+Session Session::buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
+    Session session;
+    Socket sock;
+    int flag = sock.bind(local);
+    if(flag < 0) {
+        return std::move(session);
+    }
+    flag = sock.connect(target);
+    session.buildstatus = flag;
+    if(flag < 0) {
+        return std::move(session);
+    }
+    session.mode = mode;
+    session.target = target;
+    sock.getsockname(session.local);
+    session.sock = sock;
+    return std::move(session);
+}
+    
+int Session::bind(Ipaddr local) {
+    int flag = sock.bind(local);
+    if(flag < 0) {
+        return flag;
+    }
+    sock.getsockname(this->local);
+    return flag;
+}
+
+int Session::listen(int backlog) {
+    return sock.listen(backlog);
+}
+
+Session Session::accept(int sec) {
+    if(sec) {
+        sock.setrecvtimeout(sec);
+    }
+    Ipaddr target;
+    Socket nsock;
+    Session session;
+    int flag = sock.accept(target, nsock);
+    session.buildstatus = flag;
+    if(flag < 0) {
+        return std::move(session);
+    } 
+    session.sock = nsock;
+    session.target = target;
+    nsock.getsockname(session.local);
+    session.mode = PASSIVE;
+    return std::move(session);
+}
+
+int Session::getlocalport() {
+    if(status()) {
+        return local.port;
+    }
+    return -1;
 }
