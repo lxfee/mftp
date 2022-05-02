@@ -60,7 +60,7 @@ int main() {
         return 1;
     } 
     localsession.listen(MAX_CONNECTIONS);
-    logger("Server listening on 0.0.0.0", Server::config.addr.port);
+    logger("Server listening on " + localsession.getlocaladdr().getaddr(), localsession.getlocaladdr().port);
     
 
     // thread tmpth(printthread);

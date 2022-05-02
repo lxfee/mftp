@@ -214,7 +214,7 @@ int Session::listen(int backlog) {
     return sock.listen(backlog);
 }
 
-Session Session::accept(int sec) {
+Session Session::accept(int sec, CLOSEMODE mode) {
     if(sec) {
         sock.setrecvtimeout(sec);
     }
@@ -226,10 +226,11 @@ Session Session::accept(int sec) {
     if(flag < 0) {
         return std::move(session);
     } 
+    nsock.setrecvtimeout(0);
     session.sock = nsock;
     session.target = target;
     nsock.getsockname(session.local);
-    session.mode = PASSIVE;
+    session.mode = mode;
     return std::move(session);
 }
 

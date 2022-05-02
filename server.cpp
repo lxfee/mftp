@@ -196,8 +196,7 @@ Session Server::buildstream(Session& scmd) {
         
         Ipaddr local = scmd.getlocaladdr();
         local.port++; // 数据端口 = 命令端口 + 1
-
-        Session session = Session::buildsession(target, local, PASSIVE);
+        Session session = Session::buildsession(target, local, ACTIVE);
         if(!session.status()) {
             scmd.sendmsg("ERR: can not build data connection");
         }
@@ -205,9 +204,7 @@ Session Server::buildstream(Session& scmd) {
 
     } else if(cmd == "PASV") {
         Ipaddr local = scmd.getlocaladdr();
-        logger(local.port);
         local.port = 0;
-        logger(local.port);
         Session session = Session::buildlocalsession(local, CLOSE);
 
         if(!session.status()) {
@@ -218,7 +215,7 @@ Session Server::buildstream(Session& scmd) {
         session.listen(1);
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
 
-        Session dsession = session.accept(5);
+        Session dsession = session.accept(5, ACTIVE);
         if(dsession.status() < 0) {
             scmd.sendmsg("ERR: data connection time out");
         }

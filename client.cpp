@@ -11,7 +11,7 @@
 
 
 using namespace std;
-#define CMDPORT  12345
+#define CMDPORT  12343
 
 
 Session buildstream(Session& scmd) {
@@ -26,15 +26,15 @@ Session buildstream(Session& scmd) {
         target.port = atoi(cmd.c_str()); 
         
         Ipaddr local = scmd.getlocaladdr();
-        local.port++; // 数据端口 = 命令端口 + 1
+        local.port = 0;
 
         Session session = Session::buildsession(target, local, PASSIVE);
         return std::move(session);
 
-    } else if(cmd == "PASV") {
+    } else {//if(cmd == "PASV") {
         Ipaddr local = scmd.getlocaladdr();
         local.port = 0;
-        Session session = Session::buildlocalsession(local, PASSIVE);
+        Session session = Session::buildlocalsession(local, CLOSE);
 
         if(!session.status()) {
             return std::move(session);
@@ -42,54 +42,49 @@ Session buildstream(Session& scmd) {
         
         session.listen(1);
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
-
-        Session dsession = session.accept(5);
+        logger("waiting");
+        Session dsession = session.accept(1, PASSIVE);
+        logger("done");
         if(dsession.status() < 0) {
         }
         // 建立会话
         return std::move(dsession);
 
-    } else {
-        return Session::nullsession();
-    }
+    } 
+    // else {
+    //     return Session::nullsession();
+    // }
 }
 
 
 int main() {
-    // Socket s;
-    // s.bind(Ipaddr());
-    // Ipaddr x;
-    // cout << x.port << endl;
-    
-    Session s = Session::buildlocalsession(Ipaddr(), CLOSE);
-    logger(s.getlocaladdr().port,"port");
-    // logger(s.getlocaladdr().getaddr(), "addr");
-    // Ipaddr servaddr("127.0.0.1", CMDPORT);
-    // Session scmd = Session::buildtargetsession(servaddr, ACTIVE);
-    // if(!scmd.status()) {
-    //     logger("can not connect!");
-    //     return 1;
-    // }
+    Ipaddr servaddr("127.0.0.1", CMDPORT);
+    Session scmd = Session::buildtargetsession(servaddr, ACTIVE);
+    if(!scmd.status()) {
+        logger("can not connect!");
+        return 1;
+    }
 
-    // string cmd;
-    // while(1) {
+    string cmd;
+    while(1) {
         
-    //     getline(cin, cmd);
-    //     scmd.sendmsg(cmd);
-    //     if(cmd == "BYE") break;
-    //     if(cmd == "PASV") {
-    //         Session d = buildstream(scmd);
-    //         if(!d.status()) {
-    //             logger("build data session error", "ERROR");
-    //             continue;
-    //         }
-    //         string s;
-    //         stringstream ss(s);
-    //         d.recvstream(ss);
-    //         string res;
-    //         while(ss >> res) cout << res << endl;
-    //     }
-    //     scmd.nextline();
-    //     scmd.gettok(cmd);
-    // }
+        getline(cin, cmd);
+        scmd.sendmsg(cmd);
+        if(cmd == "BYE") break;
+        if(cmd == "LIST") {
+            Session d = buildstream(scmd);
+            if(!d.status()) {
+                logger("build data session error", "ERROR");
+                continue;
+            }
+            string s;
+            stringstream ss(s);
+            d.recvstream(ss);
+            string res;
+            while(ss >> res) cout << res << endl;
+            scmd.nextline();
+        }
+        scmd.nextline();
+        scmd.gettok(cmd);
+    }
 }

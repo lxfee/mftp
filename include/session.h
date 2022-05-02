@@ -14,7 +14,7 @@ public:
 
     int bind(Ipaddr local);
     int listen(int backlog);
-    Session accept(int sec = 0);
+    Session accept(int sec = 0, CLOSEMODE mode = PASSIVE);
     Ipaddr getlocaladdr();
     Ipaddr gettargetaddr();
 
