@@ -12,6 +12,10 @@ public:
     static Session buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode);
     static Session nullsession();
 
+    bool starttargetsession(Ipaddr target, CLOSEMODE mode);
+    bool startlocalsession(Ipaddr local, CLOSEMODE mode);
+    bool startsession(Ipaddr target, Ipaddr local, CLOSEMODE mode);
+
     
 
     int bind(Ipaddr local);

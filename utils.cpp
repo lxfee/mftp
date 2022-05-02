@@ -9,16 +9,16 @@ std::string getcurrenttime() {
     time_t now = time(0);    
     tm *ltm = localtime(&now);
     std::string res;
-    std::stringstream ss;
+    std::stringstream timestr;
 
     // 输出 tm 结构的各个组成部分
-    ss << 1900 + ltm->tm_year << "年";
-    ss << 1 + ltm->tm_mon << "月";
-    ss <<  ltm->tm_mday << "日 ";
-    ss << ltm->tm_hour << ":";
-    ss << ltm->tm_min << ":";
-    ss << ltm->tm_sec << "\n";
-    getline(ss, res);
+    timestr << 1900 + ltm->tm_year << "年";
+    timestr << 1 + ltm->tm_mon << "月";
+    timestr <<  ltm->tm_mday << "日 ";
+    timestr << ltm->tm_hour << ":";
+    timestr << ltm->tm_min << ":";
+    timestr << ltm->tm_sec << "\n";
+    getline(timestr, res);
     logger(res, "时间");
     return res;
 }

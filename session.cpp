@@ -185,52 +185,65 @@ Session Session::nullsession() {
     return std::move(Session());
 }
 
+bool Session::starttargetsession(Ipaddr target, CLOSEMODE mode) {
+    if(status()) return false;
+    int flag = sock.connect(target);
+    buildstatus = flag;
+    if(flag < 0) {
+        return false;
+    }
+    this->mode = mode;
+    this->target = target;
+    sock.getsockname(this->local);
+    return true;
+}
+
+bool Session::startlocalsession(Ipaddr local, CLOSEMODE mode) {
+    if(status()) return false;
+    int flag = sock.bind(local);
+    buildstatus = flag;
+    if(flag < 0) {
+        return false;
+    }
+    this->mode = mode;
+    sock.getsockname(this->local);
+    return true;
+}
+
+bool Session::startsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
+    if(status()) return false;
+    int flag = sock.bind(local);
+    if(flag < 0) {
+        return false;
+    }
+    flag = sock.connect(target);
+    buildstatus = flag;
+    if(flag < 0) {
+        return false;
+    }
+    this->mode = mode;
+    this->target = target;
+    sock.getsockname(this->local);
+    return true;
+}
+
+
 Session Session::buildtargetsession(Ipaddr target, CLOSEMODE mode) {
     Session session;
-    Socket sock;
-    int flag = sock.connect(target);
-    session.buildstatus = flag;
-    if(flag < 0) {
-        return std::move(session);
-    }
-    session.mode = mode;
-    session.target = target;
-    sock.getsockname(session.local);
-    session.sock = sock;
+    session.starttargetsession(target, mode);
     return std::move(session);
 }
 
 Session Session::buildlocalsession(Ipaddr local, CLOSEMODE mode) {
     Session session;
-    Socket sock;
-    int flag = sock.bind(local);
-    session.buildstatus = flag;
-    if(flag < 0) {
-        return std::move(session);
-    }
-    session.mode = mode;
-    sock.getsockname(session.local);
-    session.sock = sock;
+    session.startlocalsession(local, mode);
     return std::move(session);
 }
 
 
 Session Session::buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
     Session session;
-    Socket sock;
-    int flag = sock.bind(local);
-    if(flag < 0) {
-        return std::move(session);
-    }
-    flag = sock.connect(target);
-    session.buildstatus = flag;
-    if(flag < 0) {
-        return std::move(session);
-    }
-    session.mode = mode;
-    session.target = target;
-    sock.getsockname(session.local);
-    session.sock = sock;
+    session.startsession(target, local, mode);
     return std::move(session);
 }
 
