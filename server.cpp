@@ -25,9 +25,8 @@ static bool parseIp(Ipaddr& addr, std::string ip) {
     if(p == -1) return false;
     std::string ipaddr = ip.substr(0, p);
     std::string port = ip.substr(p + 1);
-    addr.ipType = IPV4;
     addr.port = atoi(port.c_str());
-    addr.addr = ipaddr;
+    addr.setaddr(ipaddr);
     return true;
 }
 

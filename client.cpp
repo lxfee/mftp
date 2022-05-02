@@ -54,39 +54,16 @@ Session buildstream(Session& scmd) {
     }
 }
 
-void fun() {
-    int sock_fd;
-    struct sockaddr_in addr;
-    socklen_t socklen;
- 
-    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
- 
-    addr.sin_family = AF_INET;
-    addr.sin_port = 0; // 绑定随机端口
-    addr.sin_addr.s_addr = inet_addr("0.0.0.0");
- 
-    socklen = sizeof(addr);
-    if (bind(sock_fd, (struct sockaddr *)&addr, socklen)) {
-        printf("bind error");
-        // perror("bind error");
-        return ;
-    }
- 
-    // 获取系统随机分配的端口号
-    logger(sock_fd);
-    logger(getsockname(sock_fd, (sockaddr *)&addr, &socklen), "out flag");
-    printf("%u\n", ntohs(addr.sin_port));
-}
 
 int main() {
-
-    Ipaddr servaddr("0.0.0.0", 0);
-    Session s = Session::buildlocalsession(servaddr, CLOSE);
-    logger(s.getlocaladdr().port);
-
-    fun();
-    // int sock = socket()
-
+    // Socket s;
+    // s.bind(Ipaddr());
+    // Ipaddr x;
+    // cout << x.port << endl;
+    
+    Session s = Session::buildlocalsession(Ipaddr(), CLOSE);
+    logger(s.getlocaladdr().port,"port");
+    // logger(s.getlocaladdr().getaddr(), "addr");
     // Ipaddr servaddr("127.0.0.1", CMDPORT);
     // Session scmd = Session::buildtargetsession(servaddr, ACTIVE);
     // if(!scmd.status()) {
