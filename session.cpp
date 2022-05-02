@@ -10,22 +10,19 @@ int Session::wait() {
     while((nbytes = sock.read(&ch, 1)) > 0);
     return nbytes;
 }
-Session::Session() : mode(NOTCLOSE), buildstatus(-1), eoftag(true) {}
+Session::Session() : mode(NOTCLOSE), buildstatus(-1) {}
 
-Session::Session(Session && session) {
-    target = session.target;
-    local = session.local;
-    sock = session.sock;
-    mode = session.mode;
-    eoftag = session.eoftag;
-    buildstatus = session.buildstatus;
-
-    session.eoftag = true;
+Session::Session(Session && session) noexcept :
+    buffer(std::move(session.buffer)), 
+    local(session.local),
+    target(session.target), 
+    sock(session.sock),
+    mode(session.mode),
+    buildstatus(session.buildstatus)
+{
     session.mode = NOTCLOSE;
     session.buildstatus = -1;
 }
-
-
 
 Session::~Session() {
     switch (mode) {
@@ -98,50 +95,26 @@ void Session::recvstream(std::ostream& os) {
 
 void Session::gettok(std::string& cmd) {
     cmd.clear();
-    if(eoftag) return ;
-    int nbytes;
-    char ch;
-    while((nbytes = sock.read(&ch, 1)) > 0) {
-        if(ch == '\n') {
-            eoftag = true;
-            break;
+    while(!buffer.empty()) {
+        if(isspace(buffer.back())) buffer.pop_back();
+        else break;
+    }
+    while(!buffer.empty()) {
+        if(!isspace(buffer.back())) {
+            cmd.push_back(buffer.back());
+            buffer.pop_back();
         }
-        if(!isspace(ch)) break;
+        else break;
     }
-    if(nbytes <= 0)  {
-        throw "session closed";
-    }
-    if(eoftag) return ;
-    cmd.push_back(ch);
-    while((nbytes = sock.read(&ch, 1)) > 0) {
-        if(ch == '\n') {
-            eoftag = true;
-            break;
-        }
-        if(isspace(ch)) break;
-        cmd.push_back(ch);
-    }
-    if(nbytes <= 0)  {
-        throw "session closed";
-    }
-    logger("RECV TOKEN: " + cmd, target.port);
 }
 
 void Session::nextline() {
-    if(eoftag) {
-        eoftag = false;
-        return ;
-    }
-    int nbytes;
-    char ch;
-    while((nbytes = sock.read(&ch, 1)) > 0) {
-        if(ch == '\n') {
-            break;
-        }
-    }
+    recvmsg(buffer);
+    std::reverse(buffer.begin(), buffer.end());
 }
 
-// no sure if it can work
+
+// 只是判断会话是否建立成功而已
 bool Session::status() {
     if(buildstatus < 0) return false;
     return true;

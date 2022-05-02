@@ -119,7 +119,7 @@ ServerConfig Server::config;
 
 void Server::operator()(Session& scmd) {
     // init
-    // if(!login(scmd)) return ;
+    if(!login(scmd)) return ;
 
     std::string cmd;
     while(1) {

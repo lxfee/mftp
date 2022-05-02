@@ -19,7 +19,7 @@ public:
     Ipaddr gettargetaddr();
 
     Session(const Session &) = delete;
-    Session(Session &&);
+    Session(Session &&) noexcept ;
     ~Session();
     
 
@@ -35,11 +35,11 @@ public:
     
 private:
     Session();
-    bool eoftag; // 给gettok准备
     int wait();
     CLOSEMODE mode;
     Socket sock;
     Ipaddr target;
     Ipaddr local;
+    std::string buffer;
     int buildstatus;
 };

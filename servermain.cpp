@@ -70,6 +70,9 @@ int main() {
         Session clientsession = localsession.accept();
         if(!clientsession.status()) break;
         thread th(serverthread, std::move(clientsession));
+        // 必须要等待子线程函数准备好才继续
+        // 否则clientsession循环后被提前析构，导致子线程无法构造出错，内存泄露
+        while(!th.joinable());
         th.detach();
     }
 }
