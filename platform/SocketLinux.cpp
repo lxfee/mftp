@@ -7,6 +7,7 @@
 #include <cassert>
 #include <iostream>
 #include "socket.h"
+#include "logger.hpp"
 
 struct SOCK {
     SOCK(int sock) : sock(sock) {}
@@ -73,7 +74,7 @@ static void addrCv(const sockaddr* addr, Ipaddr& ipaddr) {
 
 Socket::Socket(Protocol protocol, Iptype ipType) : protocol(protocol), ipType(ipType) {
     int af = ipTypeCv(ipType), type = protocolCv(protocol);
-    sock = std::make_shared<SOCK>(socket(af, type, 0));
+    sock = socket(af, type, 0);
 }
 
 Ipaddr::Ipaddr(const std::string &addr, int port, Iptype ipType) : addr(addr), port(port), ipType(ipType) {}
@@ -82,51 +83,78 @@ Ipaddr::Ipaddr() = default;
 int Socket::bind(const Ipaddr& addr) {
     sockaddr serv_addr;
     addrCv(addr, &serv_addr);
-    return ::bind(sock->sock, &serv_addr, sizeof(sockaddr));
+    return ::bind(sock, &serv_addr, sizeof(sockaddr));
 }
 
 int Socket::connect(const Ipaddr& addr) {
     sockaddr serv_addr;
     addrCv(addr, &serv_addr);
-    return ::connect(sock->sock, &serv_addr, sizeof(sockaddr));
+    return ::connect(sock, &serv_addr, sizeof(sockaddr));
 }
 
 
-int Socket::listen(int backlog) {
-    return ::listen(sock->sock, backlog);
-}
-
-
-Socket Socket::accept(Ipaddr& addr) {
-    sockaddr serv_addr;
-    socklen_t addr_size = sizeof(sockaddr);
-    Socket res(*this);
-    res.sock = std::make_shared<SOCK>(::accept(sock->sock, &serv_addr, &addr_size));
-    addrCv(&serv_addr, addr);
+int Socket::getsockname(Ipaddr& ipaddr) {
+    struct sockaddr addr;
+    socklen_t socklen;
+    // 如果绑定时设置了端口号为0,用这个获得绑定的地址从而获得系统随机分配的端口号
+    int res = ::getsockname(sock, &addr, &socklen);
+    
+    if(res < 0) return res;
+    addrCv(&addr, ipaddr);
     return res;
 }
 
+int Socket::setsendtimeout(int sec) {
+    struct timeval timeout;
+    timeout.tv_sec = sec;
+    timeout.tv_usec = 0;
+    socklen_t len = sizeof(timeout);
+	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, len);
+}
+int Socket::setrecvtimeout(int sec) {
+    struct timeval timeout;
+    timeout.tv_sec = sec;
+    timeout.tv_usec = 0;
+    socklen_t len = sizeof(timeout);
+	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, len);
+}
+
+int Socket::listen(int backlog) {
+    return ::listen(sock, backlog);
+}
+
+
+int Socket::accept(Ipaddr& addr, Socket& sock) {
+    sockaddr serv_addr;
+    socklen_t addr_size = sizeof(sockaddr);
+    int fd = ::accept(this->sock, &serv_addr, &addr_size);
+    if(fd < 0) return fd;
+    sock.sock = fd;
+    addrCv(&serv_addr, addr);
+    return fd;
+}
+
 int Socket::shutdown(ShutdownType howto) {
-    return ::shutdown(sock->sock, shutdownCv(howto));
+    return ::shutdown(sock, shutdownCv(howto));
 }
 
 int Socket::read(void* buf, size_t nbytes) {
-    return ::read(sock->sock, buf, nbytes);
+    return ::read(sock, buf, nbytes);
 }
 
 int Socket::write(const void* buf, size_t nbytes) {
-    return ::write(sock->sock, buf, nbytes);
+    return ::write(sock, buf, nbytes);
 }
 
 
 int Socket::close() {
-    return ::close(sock->sock);
+    return ::close(sock);
 }
 
 int Socket::recvfrom(void* buf, size_t nbytes, Ipaddr& from) {
     sockaddr fromAddr;
     socklen_t addrLen = sizeof(sockaddr);
-    int res = ::recvfrom(sock->sock, buf, nbytes, 0, &fromAddr, &addrLen);
+    int res = ::recvfrom(sock, buf, nbytes, 0, &fromAddr, &addrLen);
     addrCv(&fromAddr, from);
     return res;
 }
@@ -135,7 +163,7 @@ int Socket::sendto(void *buf, size_t nbytes, const Ipaddr& to) {
     sockaddr toAddr;
     addrCv(to, &toAddr);
     socklen_t addrLen = sizeof(sockaddr);
-    int res = ::sendto(sock->sock, buf, nbytes, 0, &toAddr, addrLen);
+    int res = ::sendto(sock, buf, nbytes, 0, &toAddr, addrLen);
     return res;
 }
 

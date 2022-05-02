@@ -4,7 +4,11 @@
 #include <exception>
 #include <iostream>
 
-Session::Session(const Ipaddr& addr, const Socket& sock, CLOSEMODE mode) : addr(addr), sock(sock), mode(mode) {}
+Session::Session(const Ipaddr& addr, const Socket& sock, CLOSEMODE mode) {
+    this->addr = addr;
+    this->sock = sock;
+    this->mode = mode;
+}
 
 int Session::wait() {
     char buffer[BUFFER_SIZE];
@@ -15,6 +19,7 @@ int Session::wait() {
 
 Session::~Session() {
     if(mode == CLOSEMODE::PASSIVE) {
+        logger("Wait session closed", addr.port);
         wait();
         sock.shutdown(SD_WR);
     } else {
@@ -86,20 +91,7 @@ void Session::gettok(std::string& cmd) {
     }
 }
 
-
-void Session::prereadcmd() {
-    recvmsg(prebuffercmd);
-    buffercmd = prebuffercmd;
-    std::reverse(buffercmd.begin(), buffercmd.end());
-}
-
 void Session::readcmd() {
-    if(!prebuffercmd.empty()) {
-        swap(buffercmd, prebuffercmd);
-        prebuffercmd.clear();
-        std::reverse(buffercmd.begin(), buffercmd.end());
-        return ;
-    }
     recvmsg(buffercmd);
     std::reverse(buffercmd.begin(), buffercmd.end());
 }

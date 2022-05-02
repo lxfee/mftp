@@ -5,8 +5,29 @@
 #include <dirent.h>
 #include <iostream>
 #include <algorithm>
+#include <sstream>
+#include "logger.hpp"
 
 using json = nlohmann::json;
+
+// only support ipv4
+static bool parseIp(Ipaddr& addr, std::string ip) {
+    int p = -1;
+    
+    for(int i = 0; i < ip.size(); i++) {
+        if(ip[i] == ':') {
+            p = i;
+            break;
+        }
+    }
+    if(p == -1) return false;
+    std::string ipaddr = ip.substr(0, p);
+    std::string port = ip.substr(p + 1);
+    addr.ipType = IPV4;
+    addr.port = atoi(port.c_str());
+    addr.addr = ipaddr;
+    return true;
+}
 
 ServerConfig::ServerConfig() {
     std::ifstream fin;
@@ -22,6 +43,7 @@ ServerConfig::ServerConfig() {
         config["path"] = "./";
         config["users"]["root"] = "123456";
         config["allow anonymous"] = true;
+        config["ip"] = "0.0.0.0:" + std::to_string(CMDPORT);
         fout << std::setw(4) << config;
         fout.close();
         if(loadconfig("./config.json") < 0) {
@@ -34,20 +56,19 @@ ServerConfig::ServerConfig() {
     }
 }
 
-
-int ServerConfig::loadconfig(std::string filename) {
+bool ServerConfig::loadconfig(std::string filename) {
     std::ifstream fin;
     fin.open(filename);
     if(!fin) {
-        std::cerr << "[Server Config] can't not open config file!" << std:: endl;
-        return -1;
+        logger("can't not open config file!", "Server Config");
+        return false;
     }
     json info;
     try {
         fin >> info;
     } catch(nlohmann::detail::parse_error e) {
-        std::cerr << "[Server Config] config parse error!" << std:: endl;
-        return -1;
+        logger("config parse error!", "Server Config");
+        return false;
     }
     std::string loadedpath;
     std::map<std::string, std::string> loadedusers;
@@ -55,8 +76,8 @@ int ServerConfig::loadconfig(std::string filename) {
     if(info.contains("path")) {
         loadedpath = info["path"];
     } else {
-        std::cerr << "[Server Config] lack path!" << std:: endl;
-        return -1;
+        logger("lack path!", "Server Config");
+        return false;
     }
 
     if(info.contains("users")) {
@@ -64,58 +85,170 @@ int ServerConfig::loadconfig(std::string filename) {
             loadedusers[user.key()] = user.value();
         }
     } else {
-        std::cerr << "[Server Config] lack users!" << std:: endl;
-        return -1;
+        logger("lack users!", "Server Config");
+        return false;
     }
 
     if(info.contains("allow anonymous")) {
         allowAnonymous = info["allow anonymous"];
     } else {
-        std::cerr << "[Server Config] anonymous?" << std:: endl;
-        return -1;
+        logger("anonymous?", "Server Config");
+        return false;
+    }
+
+    if(info.contains("ip")) {
+        if(!parseIp(addr, info["ip"])) {
+            logger("can not parse ip", "Server Config");
+            return false;
+        }
+    } else {
+        logger("where is ip", "Server Config");
+        return false;
     }
 
     path = loadedpath;
     users = loadedusers;
-    return 0;
+    return true;
 }
 
+ServerConfig Server::config; 
 
 void Server::operator()(Session& scmd) {
     // init
-    if(login(scmd)) return ;
+    if(!login(scmd)) return ;
 
     std::string cmd;
     while(1) {
-        scmd.prereadcmd();
+        scmd.readcmd();
         scmd.gettok(cmd);
 
         if(cmd == "BYE") {
             scmd.sendmsg("BYE");
             break;
-        } else {
+        }
+        else 
+        if(cmd == "LIST") {
+            list(scmd);
+            scmd.sendmsg("DONE");
+        }
+        else
+        if(cmd == "GET") {
+
+        }
+        else
+        if(cmd == "PUT") {
+
+        }
+        else 
+        {
             scmd.sendmsg("ERR: unknown cmd");
         }
     }
 }
 
-ServerConfig Server::config; 
+bool getlistinfo(std::string path, std::string &listinfo) {
+    std::string test;
+    test += "123\n";
+    test += "123\n";
+    test += "123\n";
+    test += "123\n";
+    test += "123\n";
+    test += "123\n";
+    listinfo = test;
+    return true;
+}
 
-int Server::login(Session& scmd) {
+void Server::list(Session& scmd) {
+    std::string path;
+    scmd.gettok(path);
+    std::string listinfo;
+    if(getlistinfo(path, listinfo)) {
+        scmd.sendmsg("OK");
+    } else {
+        scmd.sendmsg("ERR: Path not exisit");
+        return ;
+    }
+    std::stringstream ss(listinfo);
+    SessionPtr datasession = buildStreamTp(scmd);
+    if(datasession == nullptr) {
+        return ;
+    }
+    scmd.sendmsg("Start send binary stream");
+    datasession->sendstream(ss);      
+}
+
+SessionPtr Server::buildStreamTp(Session& scmd) {
+    std::string cmd;
+    scmd.readcmd();
+    scmd.gettok(cmd);
+    if(cmd == "PORT") {
+        scmd.gettok(cmd);
+        Ipaddr clientaddr = scmd.addr;
+        clientaddr.port = atoi(cmd.c_str()); 
+        
+        Ipaddr servaddr;
+        scmd.sock.getsockname(servaddr);
+        servaddr.port++; // 数据端口 = 命令端口 + 1
+
+        Socket servsock;
+        
+        servsock.bind(servaddr);
+        servsock.connect(clientaddr);
+
+        if(servsock.bind(servaddr) < 0 || servsock.connect(clientaddr) < 0) {
+            scmd.sendmsg("ERR: can not build data connection");
+            return nullptr;
+        }
+        // 建立会话
+        return std::move(std::make_unique<Session>(clientaddr ,servsock, PASSIVE));
+    } else if(cmd == "PASV") {
+        Socket servsock;
+        Ipaddr saddr;
+        scmd.sock.getsockname(saddr);
+        saddr.port = 0;
+        if(servsock.bind(saddr) < 0) {
+            scmd.sendmsg("ERR: can not build data connection");
+            return nullptr;
+        }
+        scmd.sock.getsockname(saddr);
+        servsock.listen(1);
+        scmd.sendmsg("PORT " + std::to_string(saddr.port));
+        Ipaddr clientaddr;
+        Socket clientsock;
+        servsock.setrecvtimeout(5);
+        if(servsock.accept(clientaddr, clientsock) < 0) {
+            scmd.sendmsg("ERR: data connection time out");
+            return nullptr;
+        }
+        servsock.close();
+        
+        // 建立会话
+        return std::move(std::make_unique<Session>(clientaddr ,clientsock, PASSIVE));
+    } else {
+        scmd.sendmsg("ERR: do not know which way");
+        return nullptr;
+    }
+}
+
+bool Server::login(Session& scmd) {
     std::string cmd;
     scmd.sendmsg("LOGIN");
+
     // USER
     scmd.readcmd();
     scmd.gettok(cmd);
-    if(cmd != "USER") 
-        cmderror("ERR: request error");
-    
+    if(cmd != "USER") {
+        scmd.sendmsg("ERR: request error");
+        return false;
+    }
     scmd.gettok(cmd);
-    if(cmd == "anonymous") {
-        if(!config.allowAnonymous) 
-            cmderror("ERR: anonymous is not allow");
-    } else if(!config.users.count(cmd)) {
-        cmderror("ERR: user not exist!");
+    if(cmd == "anonymous" && !config.allowAnonymous){
+        scmd.sendmsg("ERR: request error");
+        return false;
+    }
+    if(cmd != "anonymous" && !config.users.count(cmd)) {
+        scmd.sendmsg("ERR: user not exist!");
+        return false;
     }
     user = cmd;
     scmd.sendmsg("OK");
@@ -124,15 +257,19 @@ int Server::login(Session& scmd) {
     // PASSWORD 
     scmd.readcmd();
     scmd.gettok(cmd);
-    if(cmd != "PASSWORD") 
-        cmderror("ERR: request error");
+    if(cmd != "PASSWORD") {
+        scmd.sendmsg("ERR: request error");
+        return false;
+    }
     scmd.gettok(cmd);
-    if(user != "anonymous" && config.users.at(user) != cmd) 
-        cmderror("ERR: authentication failed");
+    if(user != "anonymous" && config.users.at(user) != cmd)  {
+        scmd.sendmsg("ERR: authentication failed");
+        return false;
+    }
     passwd = cmd;
     scmd.sendmsg("OK");
 
     // DONE
-    return 0;
+    return true;
 }
 

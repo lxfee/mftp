@@ -1,21 +1,18 @@
 idir = include
 objs = SocketLinux.o session.o 
 
-test: test.o $(objs) server.o
-	g++ -g $(objs) test.o server.o -o test -lpthread
-
-test.o : test.cpp
-	g++ -I$(idir)  -c -g test.cpp
 
 all : client server
 
-
+server: servermain.o $(objs) server.o
+	g++ -g $(objs) servermain.o server.o -o server -lpthread
 
 client : client.o $(objs)
 	g++ -g client.o $(objs) -o client
 
-server : server.o $(objs)
-	g++ -g server.o $(objs) -o server
+
+servermain.o : servermain.cpp
+	g++ -I$(idir)  -c -g servermain.cpp
 
 client.o : client.cpp
 	g++ -I$(idir) -c -g client.cpp
@@ -30,4 +27,4 @@ session.o : session.cpp
 	g++ -I$(idir) -c -g session.cpp
 
 clean :
-	-rm -f *.o server client test
+	-rm -f *.o server client

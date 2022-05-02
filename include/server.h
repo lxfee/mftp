@@ -3,27 +3,25 @@
 #include "session.h"
 #include <map>
 
-#define CMDPORT  1141
-#define DATAPORT 514
-#define cmderror(respond) {scmd.sendmsg(respond); return -1;} 
+#define CMDPORT  11451
 
 struct ServerConfig {
-public:
     ServerConfig();
-    int loadconfig(std::string filename);
-    friend class Server; 
-private:
+    bool loadconfig(std::string filename);
     std::string path;
     std::map<std::string, std::string> users;
     bool allowAnonymous;
+    Ipaddr addr;
 };
 
 class Server {
 public:
     void operator()(Session& scmd);
-private:
-    int login(Session& scmd);
     static ServerConfig config; 
+private:
+    bool login(Session& scmd);
+    void list(Session& scmd);
+    SessionPtr buildStreamTp(Session& scmd);
     std::string user;
     std::string passwd;
 };

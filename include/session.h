@@ -1,8 +1,10 @@
 #pragma once
 #include "socket.h"
 #include <string>
+#include <memory>
 #define BUFFER_SIZE 512
 enum CLOSEMODE {ACTIVE, PASSIVE};
+
 
 class Session {
 public:
@@ -17,14 +19,14 @@ public:
 
     void gettok(std::string& cmd);
     void readcmd();
-    void prereadcmd();
-private:
-    int wait();
     Socket sock;
     Ipaddr addr;
+    
+private:
+    int wait();
     std::string buffercmd;
-    std::string prebuffercmd;
     CLOSEMODE mode;
 };
 
+using SessionPtr = std::unique_ptr<Session>;
 
