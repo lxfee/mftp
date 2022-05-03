@@ -7,11 +7,12 @@
 #include "utils.h"
 #include "client.h"
 #include <algorithm>
+#include <iomanip>
+#include <vector>
 
 
 using namespace std;
 #define CMDPORT  1234
-enum DCONNECTMODE {PASV, ACTV} mode;
 
 namespace parse {
 std::string buffer;
@@ -93,14 +94,14 @@ void close(Session& scmd) {
     }
 }
 
+void sync(Session& scmd) {
+    scmd.sendmsg("HELLO");
+    while(!scmd.expect("HELLO"));
+}
+
 void status(Session& scmd) {
     if(scmd.status()) {
-        scmd.sendmsg("HELLO");
-        if(!scmd.expect("HELLO")) {
-            close(scmd);
-            cout << "not connected" << endl;
-            return ;
-        }
+        sync(scmd);
         Ipaddr local = scmd.getlocaladdr();
         Ipaddr target = scmd.gettargetaddr();
         cout << "connecting" << endl;
@@ -111,11 +112,64 @@ void status(Session& scmd) {
     }
 }
 
+
+
 void list(Session& scmd) {
     if(!scmd.status()) {
         cout << "not connected" << endl;
     } else {
-        
+        string path;
+        gettok(path);
+        if(path.empty()) path = "."; 
+        scmd.sendmsg("LIST " + path);
+        if(!scmd.expect("OK")) {
+            cout << "request refused" << endl;
+            return ;
+        }
+        Session datasession = buildstream(scmd, ACTV);
+        if(!scmd.expect("BEGIN")) {
+            cout << "can not build data session" << endl;
+            return ;
+        }
+        if(!datasession.status()) {
+            cout << "error ocur!" << endl;
+            return ;
+        }
+        stringstream listinfo;
+        datasession.recvstream(cout);
+        cout << endl;
+    }
+}
+
+vector<string> cmds = {
+    "ls"        , "列出目录下的文件和文件夹",
+    "help"      , "帮助",
+    "status"    , "查看连接状态",
+    "open"      , "打开一个连接",
+    "close"     , "关闭当前连接",
+    "bye"       , "关闭客户端"
+};
+
+void printhelp() {
+    string cmd;
+    gettok(cmd);
+    if(cmd.empty()) {
+        cout << "输入help [cmd]查看帮助" << endl;
+        for(int i = 0; i < cmds.size(); i += 2) {
+            cout << setw(10) << cmds[i];
+            if((i / 2 + 1) % 4 == 0) cout << endl;
+        }
+        cout << endl;
+    } else {
+        bool found = false;
+        for(int i = 0; i < cmds.size(); i+= 2) {
+            if(cmds[i] == cmd) {
+                cout << cmd << ": " << cmds[i + 1] << endl;
+                found = true;
+                break;
+            }
+        }
+        if(!found) cout << cmd << ": " << "找不到指令" << endl;
     }
 }
 
@@ -136,6 +190,9 @@ bool prasecmd(Session& scmd, string cmd) {
     else if(cmd == "ls") {
         list(scmd);
     }
+    else if(cmd == "help") {
+        printhelp();
+    }
     return true;
 }
 
@@ -145,8 +202,6 @@ int main() {
     // init
     string cmd;
     Session scmd = Session::closedsession();
-    mode = PASV;
-
     while(1) {
         cout << "mftp> ";
         nextline();

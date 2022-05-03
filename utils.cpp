@@ -3,6 +3,9 @@
 #include "logger.hpp"
 #include <sstream>
 #include <filesystem>
+#include <vector>
+#include <algorithm>
+
 
 std::string getcurrenttime() {
     // 基于当前系统的当前日期/时间
@@ -38,36 +41,85 @@ uintmax_t ComputeFileSize(const fs::path& pathToCheck) {
     return static_cast<uintmax_t>(-1);
 }
 
+std::string getpath(std::string base, std::string path) {
+    if(path.empty()) return base;
+    if(!base.empty() && base.back() == '/') base.pop_back();
+    
+    std::vector<std::string> stpath;
+    std::reverse(path.begin(), path.end());
+
+    while(!path.empty()) {
+        while(!path.empty() && path.back() == '/') path.pop_back();
+        std::string obj;
+        while(!path.empty() && path.back() != '/') {
+            obj.push_back(path.back());
+            path.pop_back();
+        }
+        if(obj.empty()) continue;
+        if(obj == "..") {
+            if(!stpath.empty()) stpath.pop_back();
+        } else if(obj != ".") {
+            stpath.push_back(obj);
+        }
+    }
+
+    std::string tpath;
+    for(int i = 0; i < stpath.size(); i++) {
+        tpath.push_back('/');
+        tpath.append(stpath[i]);            
+    }
+    return base + tpath;
+}
 
 bool getlist(std::string path, std::ostream &list) {
+    std::vector<std::pair<int, fs::path>> paths;
+
     if(direxists(path)) {
         for (const auto& entry : fs::directory_iterator(path)) {
-            auto filename = entry.path().filename().string();
+            auto epath = entry.path();
             if (fs::is_directory(entry.status())) {
-                list << "[D] ";
-                list << std::setw(16) << " ";
-                list << std::setw(20) << filename;
-                list << std::endl;
+                paths.push_back(std::make_pair(0, epath));
             }
             else if (fs::is_regular_file(entry.status())) {
-                list << "[F] ";
-                list << std::setw(16) << ComputeFileSize(entry.path());
-                list << std::setw(20) << filename;
-                list << std::endl;
+                paths.push_back(std::make_pair(1, epath));
             } else {
-                list << "[?] ";
-                list << std::setw(16) << " ";
-                list << std::setw(20) << filename;
-                list << std::endl;
+                paths.push_back(std::make_pair(2, epath));
             }
         }
     } else if(fs::is_regular_file(path)) {
-        list << "[F] ";
-        list << std::setw(16) << ComputeFileSize(path);
-        list << std::setw(20) << fs::path(path).filename().string();
-        list << std::endl;
+        paths.push_back(std::make_pair(1, fs::path(path)));
     } else {
         return false;
+    }
+
+    std::sort(paths.begin(), paths.end());
+    int wide = 0;
+    for(int i = 0; i < paths.size(); i++) {
+        wide = std::max(wide, (int)paths[i].second.filename().string().size());
+    }
+    wide += 2;
+    for(const auto& ppath : paths) {
+        switch(ppath.first) {
+            case 0:
+                list << "[D] ";
+                list << std::setw(20) << " ";
+                list << std::setw(wide) << ppath.second.filename().string();
+                list << std::endl;
+                break;
+            case 1:
+                list << "[F] ";
+                list << std::setw(20) << ComputeFileSize(ppath.second);
+                list << std::setw(wide) << ppath.second.filename().string();
+                list << std::endl;
+                break;
+            case 2:
+            default:
+                list << "[?] ";
+                list << std::setw(20) << " ";
+                list << std::setw(wide) << ppath.second.filename().string();
+                list << std::endl;
+                break;
+        }
     }
     return true;
 }

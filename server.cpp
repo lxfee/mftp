@@ -120,7 +120,6 @@ void Server::operator()(Session& scmd) {
         }
         else if(cmd == "LIST") {
             list(scmd);
-            scmd.sendmsg("DONE");
         }
         else if(cmd == "GET") {
 
@@ -147,25 +146,25 @@ void Server::list(Session& scmd) {
     scmd.gettok(path);
 
     std::stringstream listinfo;
-    if(getlist(path, listinfo)) {
+    if(getlist(getpath(config.path, path), listinfo)) {
         scmd.sendmsg("OK");
     } else {
         scmd.sendmsg("ERR: Path not exisit");
         return ;
     }
     Session datasession = buildstream(scmd);
-    if(!datasession.status()) return ;
-
-    scmd.sendmsg("Start send binary stream");
+    if(!datasession.status()) {
+        scmd.sendmsg("ERR: Can't build");
+        return ;
+    }
+    scmd.sendmsg("BEGIN");
     datasession.sendstream(listinfo, listinfo.tellp());
 }
 
 Session Server::buildstream(Session& scmd) {
     std::string cmd;
-    
     scmd.nextline();
     scmd.gettok(cmd);
-
     if(cmd == "PORT") {
         scmd.gettok(cmd);
         Ipaddr target = scmd.gettargetaddr();
@@ -175,7 +174,7 @@ Session Server::buildstream(Session& scmd) {
         local.port++; // 数据端口 = 命令端口 + 1
         Session session = Session::buildsession(target, local, PASSIVE);
         if(!session.status()) {
-            scmd.sendmsg("ERR: can not build data connection");
+            logger("ERR: can not build data connection", "buildstream");
         }
         return std::move(session);
 
@@ -185,7 +184,7 @@ Session Server::buildstream(Session& scmd) {
         Session session = Session::buildlocalsession(local, CLOSE);
 
         if(!session.status()) {
-            scmd.sendmsg("ERR: can not build data connection");
+            logger("ERR: can not build data connection", "buildstream");
             return std::move(session);
         }
         
@@ -193,14 +192,13 @@ Session Server::buildstream(Session& scmd) {
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
 
         Session dsession = session.accept(5, PASSIVE);
-        if(dsession.status() < 0) {
-            scmd.sendmsg("ERR: data connection time out");
+        if(!dsession.status()) {
+            logger("ERR: data connection time out", "buildstream");
         }
         // 建立会话
         return std::move(dsession);
-
     } else {
-        scmd.sendmsg("ERR: do not know which way");
+        logger("ERR: do not know which way");
         return Session::closedsession();
     }
 }
