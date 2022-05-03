@@ -3,4 +3,8 @@
 
 ### 编译
 linux平台`make server`编译服务端，`make client`编译客户端，`make all`同时编译服务端和客户端。
+
 windows平台`mingw32-make platform=windows server`编译服务端，其余类似。
+
+### 参考
+使用了github上面的一个json库，[地址](https://github.com/nlohmann/json)
