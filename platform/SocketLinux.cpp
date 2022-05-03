@@ -12,7 +12,7 @@
 
 
 
-static int SDType(SDType howto) {
+static int shutdown(SDType howto) {
     switch(howto) {
         case SD_RD  : return SHUT_RD; 
         case SD_WR  : return SHUT_WR;

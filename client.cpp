@@ -110,7 +110,12 @@ Session buildstream(Session& scmd, CONNECTMODE mode) {
             logger("ERR: can not build data connection", "buildstream");
             return std::move(session);
         }
-        session.listen(1);
+        
+        if(!session.listen(1)) {
+            logger("ERR: can not build data connection", "buildstream");
+            return std::move(session);
+        }
+        
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
 
         Session dsession = session.accept(5, ACTIVE);
