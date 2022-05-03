@@ -59,6 +59,10 @@ bool prasecmd(Session& scmd, string cmd) {
 
 
 int main() {
+    #ifdef WINDOWS
+    WSAStart();
+    #endif
+
     string cmd;
     Session scmd = Session::closedsession();
     while(1) {
@@ -72,4 +76,8 @@ int main() {
             cout << "Session closed" << endl;
         }
     }
+
+    #ifdef WINDOWS
+    WSAClean();
+    #endif
 }

@@ -3,12 +3,21 @@
 #include <string>
 #include <memory>
 
+#ifdef WINDOWS
+#include <winsock2.h>
+using SOCK_T = SOCKET;
+void WSAStart();
+void WSAClean();
+#endif
+#ifdef LINUX
 using SOCK_T = int;
+#endif
+
 using ADDR_T = unsigned int;
 
 #define panic(msg) std::cerr << msg << std::endl; assert(0)
 
-enum ShutdownType {SD_RD = 1, SD_WR = 2, SD_RDWR = 3};
+enum SDType {SD_RD = 1, SD_WR = 2, SD_RDWR = 3};
 
 struct Ipaddr {
 	Ipaddr();
@@ -27,7 +36,7 @@ public:
 	int connect(Ipaddr addr);
 	int listen(int backlog);
 	Socket accept(Ipaddr& addr, int& status);
-	int shutdown(ShutdownType howto);
+	int shutdown(SDType howto);
 	int read(void* buf, size_t nbytes);
 	int write(const void* buf, size_t nbytes);
 	int close();
@@ -36,7 +45,7 @@ public:
 	int getsockname(Ipaddr& ipaddr);
 	int setsendtimeout(int sec);
 	int setrecvtimeout(int sec);
-	
+
 private:
 	SOCK_T sock;		// sock套接字
 };

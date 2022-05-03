@@ -1,36 +1,63 @@
-idir = include
-objs = SocketLinux.o session.o utils.o
-
+platform = 
+flag = 
+lib =  
+include_dir = include
+objs = session.o utils.o
+serverobjs = servermain.o server.o
+clientobjs = clientmain.o client.o
 
 all : client server
 
-server: servermain.o $(objs) server.o
-	g++ -g $(objs) servermain.o server.o -o server -lpthread
+ifeq ($(platform), windows)
+serverobjs += SocketWindows.o
+clientobjs += SocketWindows.o
+flag += -DWINDOWS
+lib += -lws2_32
+else
+serverobjs += SocketLinux.o
+clientobjs += SocketLinux.o
+flag += -DLINUX 
+endif
 
-client : clientmain.o $(objs) client.o
-	g++ -g clientmain.o $(objs) client.o -o client
+server:  $(serverobjs) $(objs)
+	g++ -g $(flag) $(serverobjs) $(objs) -o server  -lpthread $(lib)
+
+
+client :  $(clientobjs) $(objs)
+	g++ -g $(flag) $(clientobjs) $(objs) -o client  $(lib)
 
 
 servermain.o : servermain.cpp
-	g++ -I$(idir)  -c -g servermain.cpp
+	g++ $(flag) -I$(include_dir)  -c -g servermain.cpp
 
 clientmain.o : clientmain.cpp
-	g++ -I$(idir) -c -g clientmain.cpp
+	g++ $(flag) -I$(include_dir) -c -g clientmain.cpp
 
-server.o : server.cpp
-	g++ -std=c++17 -I$(idir) -c -g server.cpp
 
 SocketLinux.o : platform/SocketLinux.cpp
-	g++ -I$(idir) -c -g platform/SocketLinux.cpp
+	g++ -I$(include_dir) -DLINUX -c -g platform/SocketLinux.cpp
+
+SocketWindows.o : platform/SocketWindows.cpp
+	g++ -I$(include_dir) -DWINDOWS -c -g platform/SocketWindows.cpp
 
 session.o : session.cpp
-	g++ -I$(idir) -c -g session.cpp
+	g++ $(flag) -I$(include_dir) -c -g session.cpp
+
 
 utils.o : utils.cpp
-	g++ -std=c++17 -I$(idir) -c -g utils.cpp
+	g++ $(flag) -std=c++17 -I$(include_dir) -c -g utils.cpp
 
 client.o : client.cpp
-	g++  -std=c++17 -I$(idir) -c -g client.cpp
+	g++ $(flag) -std=c++17 -I$(include_dir) -c -g client.cpp
+
+server.o : server.cpp
+	g++ $(flag) -std=c++17 -I$(include_dir) -c -g server.cpp
+
 
 clean :
+ifeq ($(platform), windows)
+	@echo I don't know how to del files on windows
+else
 	-rm -f *.o server client
+endif
+	

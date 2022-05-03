@@ -4,8 +4,8 @@
 #include <vector>
 #include <filesystem>
 #include <fstream>
-#include "socket.h"
 #include "utils.h"
+#include "socket.h"
 
 CONNECTMODE mode = PASV;
 namespace fs = std::filesystem;

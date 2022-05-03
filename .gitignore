@@ -5,3 +5,4 @@ test.cpp
 server
 client
 tmp/*
+*.exe

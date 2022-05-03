@@ -54,6 +54,10 @@ void serverthread(Session scmd) {
 
 
 int main() {
+    #ifdef WINDOWS
+    WSAStart();
+    #endif
+
     Session localsession = Session::buildlocalsession(Server::config.addr, CLOSE);
     
     if(!localsession.status()) {
@@ -76,4 +80,8 @@ int main() {
         while(!th.joinable());
         th.detach();
     }
+
+    #ifdef WINDOWS
+    WSAClean();
+    #endif
 }

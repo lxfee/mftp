@@ -1,22 +1,22 @@
-#include <cstdio>
-#include <cstring>
-#include <cstdlib>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <cassert>
-#include <iostream>
+#include <winsock2.h>
 #include "socket.h"
-#include "logger.hpp"
+#include <iostream>
+#include <cassert>
 
+void WSAStart() {
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
+}
 
+void WSAClean() {
+    WSACleanup();
+}
 
-
-static int SDType(SDType howto) {
+static int shutdown(SDType howto) {
     switch(howto) {
-        case SD_RD  : return SHUT_RD; 
-        case SD_WR  : return SHUT_WR;
-        case SD_RDWR: return SHUT_RDWR;
+        case SD_RD  : return SD_RECEIVE; 
+        case SD_WR  : return SD_SEND;
+        case SD_RDWR: return SD_BOTH;
         default: panic("sd error");
     }
     return -1;
@@ -51,6 +51,7 @@ void Ipaddr::setaddr(std::string addr) {
 }
 
 Socket::Socket() {
+    static bool first = true;
     sock = socket(AF_INET, SOCK_STREAM, 0);
 }
 
@@ -72,7 +73,7 @@ int Socket::connect(Ipaddr addr) {
 int Socket::getsockname(Ipaddr& addr) {
     struct sockaddr_in tmpaddr;
     // 不要忘记设置长度
-    socklen_t socklen = sizeof(tmpaddr);
+    int socklen = sizeof(tmpaddr);
     // 如果绑定时设置了端口号为0，用这个获得绑定的地址从而获得系统随机分配的端口号
     int flag = ::getsockname(sock, (struct sockaddr *)&tmpaddr, &socklen);
     if(flag < 0) return flag;
@@ -84,16 +85,16 @@ int Socket::setsendtimeout(int sec) {
     struct timeval timeout;
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
-    socklen_t len = sizeof(timeout);
-	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, len);
+    int len = sizeof(timeout);
+	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, len);
 }
 
 int Socket::setrecvtimeout(int sec) {
     struct timeval timeout;
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
-    socklen_t len = sizeof(timeout);
-	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, len);
+    int len = sizeof(timeout);
+	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, len);
 }
 
 int Socket::listen(int backlog) {
@@ -103,7 +104,7 @@ int Socket::listen(int backlog) {
 
 Socket Socket::accept(Ipaddr& addr, int& status) {
     struct sockaddr_in tmpaddr;
-    socklen_t addr_size = sizeof(tmpaddr);
+    int addr_size = sizeof(tmpaddr);
     status = ::accept(this->sock, (struct sockaddr*)&tmpaddr, &addr_size);
     Socket sock(*this);
     sock.sock = status;
@@ -117,21 +118,21 @@ int Socket::shutdown(SDType howto) {
 }
 
 int Socket::read(void* buf, size_t nbytes) {
-    return ::read(sock, buf, nbytes);
+    return ::recv(sock, (char*)buf, nbytes, 0);
 }
 
 int Socket::write(const void* buf, size_t nbytes) {
-    return ::write(sock, buf, nbytes);
+    return ::send(sock, (char*)buf, nbytes, 0);
 }
 
 int Socket::close() {
-    return ::close(sock);
+    return ::closesocket(sock);
 }
 
 int Socket::recvfrom(void* buf, size_t nbytes, Ipaddr& from) {
     struct sockaddr_in fromAddr;
-    socklen_t addrLen = sizeof(fromAddr);
-    int flag = ::recvfrom(sock, buf, nbytes, 0, (struct sockaddr*)&fromAddr, &addrLen);
+    int addrLen = sizeof(fromAddr);
+    int flag = ::recvfrom(sock, (char*)buf, nbytes, 0, (struct sockaddr*)&fromAddr, &addrLen);
     if(flag < 0) return flag;
     addrconvert(fromAddr, from);
     return flag;
@@ -140,8 +141,8 @@ int Socket::recvfrom(void* buf, size_t nbytes, Ipaddr& from) {
 int Socket::sendto(void *buf, size_t nbytes, Ipaddr to) {
     struct sockaddr_in toAddr;
     addrconvert(to, toAddr);
-    socklen_t addrLen = sizeof(toAddr);
-    return ::sendto(sock, buf, nbytes, 0, (struct sockaddr*)&toAddr, addrLen);
+    int addrLen = sizeof(toAddr);
+    return ::sendto(sock, (char*)buf, nbytes, 0, (struct sockaddr*)&toAddr, addrLen);
 }
 
 

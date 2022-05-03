@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <vector>
 #include <algorithm>
+#include "socket.h"
 
 std::string getcurrenttime() {
     // 基于当前系统的当前日期/时间
