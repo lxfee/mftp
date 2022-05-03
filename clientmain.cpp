@@ -7,6 +7,7 @@
 #include <vector>
 #include <iomanip>
 using namespace std;
+bool debugflag = false;
 
 extern CONNECTMODE mode;
 
@@ -41,6 +42,16 @@ bool prasecmd(Session& scmd, string cmd) {
     }
     else if(cmd == "run") {
         runcmd(scmd);
+    }
+    else if(cmd == "debug") {
+        debugflag = debugflag ^ 1;
+        cout << "debug: " << debugflag << endl;
+    }
+    else if(cmd == "!") {
+        runlocalcmd();
+    }
+    else {
+        cout << "unknown cmd" << endl;
     }
     return true;
 }

@@ -1,3 +1,4 @@
+#pragma once
 #include "logger.hpp"
 #include <string>
 #include "session.h"
@@ -28,8 +29,9 @@ void status(Session& scmd);
 
 void open(Session& scmd);
 
-extern std::string buffer;
+void runlocalcmd();
 
+extern std::string buffer;
 void gettok(std::string& cmd);
 void readline(std::string& line);
 void nextline();

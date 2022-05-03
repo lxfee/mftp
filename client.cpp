@@ -12,6 +12,8 @@ namespace fs = std::filesystem;
 using namespace std;
 std::string buffer;
 
+/**********************SYSTEM COMMAND***************************/
+
 void gettok(std::string& cmd) {
     cmd.clear();
     while(!buffer.empty()) {
@@ -56,6 +58,8 @@ vector<string> cmds = {
     ,"get"          , "获得文件"
     ,"put"          , "发送文件"
     ,"run"          , "运行远程指令"
+    ,"debug"        , "打开/关闭调试开关"
+    ,"!"            , "运行本地指令"
 };
 
 void printhelp() {
@@ -114,7 +118,6 @@ Session buildstream(Session& scmd, CONNECTMODE mode) {
             logger("ERR: can not build data connection", "buildstream");
             return std::move(dsession);
         }
-
         // 建立会话
         return std::move(dsession);
     }
@@ -126,141 +129,6 @@ bool login(Session& scmd, string user, string passwd) {
     scmd.sendmsg("PASSWORD " + passwd);
     if(!scmd.expect("OK")) return false;
     return true;
-}
-
-void list(Session& scmd) {
-    if(!scmd.status()) {
-        cout << "not connected" << endl;
-        return ;
-    }
-    string path;
-    gettok(path);
-    if(path.empty()) path = "."; 
-    scmd.sendmsg("LIST " + path);
-    if(!scmd.expect("OK")) {
-        cout << "request refused" << endl;
-        return ;
-    }
-    Session datasession = buildstream(scmd, mode);
-    if(!scmd.expect("BEGIN")) {
-        cout << "can not build data session" << endl;
-        return ;
-    }
-    if(!datasession.status()) {
-        cout << "error ocur!" << endl;
-        return ;
-    }
-    stringstream listinfo;
-    datasession.recvstream(cout);
-    cout << endl;
-}
-
-void gettime(Session& scmd) {
-    if(!scmd.status()) {
-        cout << "not connected" << endl;
-        return ;
-    }
-    scmd.sendmsg("TIME");
-    string time;
-    scmd.recvmsg(time);
-    cout << "时间: " << time << endl;
-}
-
-void getfile(Session& scmd) {
-    if(!scmd.status()) {
-        cout << "not connected" << endl;
-        return ;
-    }
-    string target, local;
-    while(1) {
-        readline(target);
-        if(!target.empty()) break;
-        cout << "remote target: ";
-        nextline();
-    }
-    cout << "path to save: ";
-    nextline();
-    readline(local);
-
-    if(fs::exists(local)) {
-        cout << "file exist" << endl;
-        return ;
-    }
-    ofstream fout;
-    fout.open(local);
-    if(!fout) {
-        cout << "can not create file" << endl;
-        fout.close();
-        return ;
-    }
-
-    scmd.sendmsg("GET " + target);
-    if(!scmd.expect("OK")) {
-        cout << "request refused" << endl;
-        return ;
-    }
-    Session datasession = buildstream(scmd, mode);
-    if(!datasession.status()) {
-        cout << "error ocur!" << endl;
-        return ;
-    }
-    if(!scmd.expect("BEGIN")) {
-        cout << "can not build data session" << endl;
-        return ;
-    }
-    datasession.recvstream(fout);
-    fout.close();
-    cout << "file saved: " + local << endl;
-}
-
-void putfile(Session& scmd) {
-    if(!scmd.status()) {
-        cout << "not connected" << endl;
-        return ;
-    }
-    string target, local;
-    while(1) {
-        readline(local);
-        if(!local.empty()) break;
-        cout << "local target: ";
-        nextline();
-    }
-    cout << "remote path to save: ";
-    nextline();
-    readline(target);
-
-    if(!fs::exists(local)) {
-        cout << "path not exisit" << endl;
-        return ;
-    }
-    if(!fs::is_regular_file(local)) {
-        cout << "ERR: it is not a file" << endl;
-        return ;
-    } 
-
-    std::ifstream fin;
-    fin.open(local);
-    if(!fin) {
-        cout << "ERR: can not open file" << endl;
-        fin.close();
-        return ;
-    }
-    scmd.sendmsg("PUT " + target);
-    if(!scmd.expect("OK")) {
-        cout << "request refused" << endl;
-        return ;
-    }
-    Session datasession = buildstream(scmd, mode);
-    if(!datasession.status()) {
-        cout << "error ocur!" << endl;
-        return ;
-    }
-    if(!scmd.expect("BEGIN")) {
-        cout << "can not build data session" << endl;
-        return ;
-    }
-    datasession.sendstream(fin);
-    fin.close();
 }
 
 void close(Session& scmd) {
@@ -275,6 +143,7 @@ void sync(Session& scmd) {
     while(!scmd.expect("HELLO"));
 }
 
+
 void status(Session& scmd) {
     if(scmd.status()) {
         sync(scmd);
@@ -288,65 +157,144 @@ void status(Session& scmd) {
     }
 }
 
-void open(Session& scmd) {
-    if(scmd.status()) {
-        cout << "already connected" << endl;
-    } else {
-        string ip;
-        while(1) {
-            gettok(ip);
-            if(!ip.empty()) break;
-            cout << "target [IP:PORT] : ";
-            nextline();
-        }
-        Ipaddr target;
-        if(!parseIp(target, ip)) {
-            cout << "can not parse address" << endl;
-            return ;
-        }
-        if(!scmd.starttargetsession(target, ACTIVE)) {
-            cout << "can not locate target" << endl;
-            return ;
-        }
-        if(!scmd.expect("LOGIN")) {
-            cout << "unexpect situation" << endl;
-            return ;
-        }
-        string user, passwd;
-        cout << "USER: ";
-        nextline();
-        gettok(user);
-        cout << "PASSWORD: ";
-        nextline();
-        gettok(passwd);
-        if(login(scmd, user, passwd)) {
-            cout << "open success" << endl;
-            return ;
-        } else {
-            cout << "login failed" << endl;
-            return ;
-        }
+
+/*********************USER COMMAND***********************/
+
+#define PRETIPSINPUT(TIPS, OBJ) \
+    while(1) { \
+        readline(OBJ);\
+        if(!OBJ.empty()) break;\
+        cout << TIPS;\
+        nextline();\
     }
+
+#define TIPSINPUT(TIPS, OBJ) \
+    cout << TIPS; \
+    nextline(); \
+    readline(OBJ);
+
+#define EXPECT(EXP, MSG) \
+    if(!scmd.expect(EXP)) { \
+        cout << MSG << endl; \
+        return ; \
+    }
+
+#define MUSTNOT(EXP, MSG, OP) \
+    if(EXP) {\
+        cout << MSG << endl; \
+        OP; \
+        return ; \
+    }
+
+#define MUST(EXP, MSG, OP) \
+    if(!(EXP)) {\
+        cout << MSG << endl; \
+        OP; \
+        return ; \
+    }
+
+void list(Session& scmd) {
+    MUST(scmd.status(), "not connected",);
+    string path;
+    gettok(path);
+    if(path.empty()) path = "."; 
+    scmd.sendmsg("LIST " + path);
+    EXPECT("OK", "request refused");
+    
+    Session datasession = buildstream(scmd, mode);
+    MUST(datasession.status(), "error ocur!", );
+    EXPECT("BEGIN", "can not build data session");
+    stringstream listinfo;
+    datasession.recvstream(cout);
+    cout << endl;
 }
 
+void gettime(Session& scmd) {
+    MUST(scmd.status(), "not connected",);
+    scmd.sendmsg("TIME");
+    string time;
+    scmd.recvmsg(time);
+    cout << "时间: " << time << endl;
+}
+
+void getfile(Session& scmd) {
+    MUST(scmd.status(), "not connected",);
+    string remote, local;
+    PRETIPSINPUT("remote target", remote);
+    TIPSINPUT("locate path to save: ", local);
+    MUSTNOT(fs::exists(local), "file exist", );
+    
+    ofstream fout;
+    fout.open(local);
+    MUST(fout, "can not create file", fout.close());
+
+    scmd.sendmsg("GET " + remote);
+    EXPECT("OK", "request refused");
+    
+    Session datasession = buildstream(scmd, mode);
+    MUST(datasession.status(), "error ocur!", );
+    EXPECT("BEGIN", "can not build data session");
+    
+    datasession.recvstream(fout);
+    fout.close();
+    cout << "file saved: " + local << endl;
+}
+
+void putfile(Session& scmd) {
+    MUST(scmd.status(), "not connected",);
+    string remote, local;
+    PRETIPSINPUT("local target: ", local);
+    TIPSINPUT("remote path to save: ", remote);
+
+    MUST(fs::exists(local), "path not exisit", );
+    MUST(fs::is_regular_file(local), "ERR: it is not a file", );
+
+    std::ifstream fin;
+    fin.open(local);
+    MUST(fin, "ERR: can not open file", fin.close());
+    
+    scmd.sendmsg("PUT " + remote);
+    EXPECT("OK", "request refused");
+    Session datasession = buildstream(scmd, mode);
+    MUST(datasession.status(), "error ocur!", );
+    EXPECT("BEGIN", "can not build data session");
+    datasession.sendstream(fin);
+    fin.close();
+}
+
+void open(Session& scmd) {
+    MUSTNOT(scmd.status(), "already connected", );
+    string ip;
+    Ipaddr remote;
+    PRETIPSINPUT("remote [IP:PORT] : ", ip);
+    MUST(parseIp(remote, ip), "can not parse address", );
+    MUST(scmd.starttargetsession(remote, ACTIVE), "can not locate target", );
+    EXPECT("LOGIN", "unexpect situation");
+    
+    string user, passwd;
+    
+    TIPSINPUT("USER: ", user);
+    TIPSINPUT("PASSWORD: ", passwd);
+    if(login(scmd, user, passwd)) {
+        cout << "open success" << endl;
+        return ;
+    } else {
+        cout << "login failed" << endl;
+        return ;
+    }
+}
+void runlocalcmd() {
+    string cmd;
+    readline(cmd);
+    system(cmd.c_str());
+}
 
 void runcmd(Session& scmd) {
-    if(!scmd.status()) {
-        cout << "not connected" << endl;
-        return ;
-    }
+    MUST(scmd.status(), "not connected",);
     string cmd;
-    while(1) {
-        readline(cmd);
-        if(!cmd.empty()) break;
-        cout << "cmd: ";
-        nextline();
-    }
+    PRETIPSINPUT("cmd: ", cmd);
     scmd.sendmsg("RUN " + cmd);
-    if(!scmd.expect("OK")) {
-        cout << "error ocr" << endl;
-        return ;
-    }
+    EXPECT("OK", "error ocr");
     string result;
     scmd.recvmsg(result);
     cout << result << endl;

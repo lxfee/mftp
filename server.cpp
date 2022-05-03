@@ -17,6 +17,7 @@ namespace fs = std::filesystem;
 
 ServerConfig::ServerConfig() {
     std::ifstream fin;
+    fs::create_directories("tmp");
     fin.open("./config.json");
     if(!fin) {
         fin.close();
@@ -26,7 +27,7 @@ ServerConfig::ServerConfig() {
             panic("[Server Config] can't not create config file!");
         }
         json config;
-        config["path"] = "./";
+        config["path"] = "./tmp";
         config["users"]["root"] = "123456";
         config["allow anonymous"] = true;
         config["ip"] = "0.0.0.0:" + std::to_string(CMDPORT);
@@ -142,46 +143,45 @@ void Server::operator()(Session& scmd) {
         }
     }
 }
+
+
+#define MUSTNOT(EXP, MSG, OP) \
+    if(EXP) {\
+        scmd.sendmsg(MSG); \
+        OP; \
+        return ; \
+    }
+
+#define MUST(EXP, MSG, OP) \
+    if(!(EXP)) {\
+        scmd.sendmsg(MSG); \
+        OP; \
+        return ; \
+    }
+
 void Server::putfile(Session& scmd) {
-    std::string target;
-    scmd.readline(target);
-    logger(target);
-    target = getpath(config.path, target);
-    if(!config.users.count(user)) {
-        scmd.sendmsg("ERR: forbiden");
-        return ;
-    }
-    if(fs::exists(target)) {
-        scmd.sendmsg("ERR: file exist");
-        return ;
-    }
+    std::string savepath;
+    scmd.readline(savepath);
+    logger(savepath);
+    savepath = getpath(config.path, savepath);
+    MUST(config.users.count(user), "ERR: forbiden", );
+    MUSTNOT(fs::exists(savepath), "ERR: file exist", );
     
     std::ofstream fout;
-    fout.open(target);
-    
-    if(!fout) {
-        scmd.sendmsg("ERR: can not create file");
-        fout.close();
-        return ;
-    }
+    fout.open(savepath);
+    MUST(fout, "ERR: can not create file", fout.close());
 
     scmd.sendmsg("OK");
     Session datasession = buildstream(scmd);
-    if(!datasession.status()) {
-        scmd.sendmsg("ERR: Can't build");
-        return ;
-    }
+    MUST(datasession.status(), "ERR: Can't build", );
     scmd.sendmsg("BEGIN");
     datasession.recvstream(fout);
     fout.close();
-    logger("file saved: " + target);
+    logger("file saved: " + savepath);
 }
 
 void Server::runcmd(Session& scmd) {
-    if(!config.users.count(user)) {
-        scmd.sendmsg("ERR: forbiden");
-        return ;
-    }
+    MUST(config.users.count(user), "ERR: forbiden", );
     std::string cmd;
     scmd.readline(cmd);
     scmd.sendmsg("OK");
@@ -191,33 +191,22 @@ void Server::runcmd(Session& scmd) {
 }
 
 void Server::getfile(Session& scmd) {
-    std::string target;
-    scmd.readline(target);
-    target = getpath(config.path, target);
-    if(!fs::exists(target)) {
-        scmd.sendmsg("ERR: path not exisit");
-        return ;
-    }
-    if(!fs::is_regular_file(target)) {
-        scmd.sendmsg("ERR: it is not a file");
-        return ;
-    } 
+    std::string filepath;
+    scmd.readline(filepath);
+    filepath = getpath(config.path, filepath);
+    MUST(fs::exists(filepath), "ERR: path not exisit",);
+    MUST(fs::is_regular_file(filepath), "ERR: it is not a file",);
+
     std::ifstream fin;
-    fin.open(target);
-    if(!fin) {
-        scmd.sendmsg("ERR: can not open file");
-        fin.close();
-        return ;
-    }
+    fin.open(filepath);
+    MUST(fin, "ERR: can not open file", fin.close());
     scmd.sendmsg("OK");
     Session datasession = buildstream(scmd);
-    if(!datasession.status()) {
-        scmd.sendmsg("ERR: Can't build");
-        return ;
-    }
+    MUST(datasession.status(), "ERR: Can't build", );
     scmd.sendmsg("BEGIN");
     datasession.sendstream(fin);
     fin.close();
+    // 服务器主动关闭
     datasession.close();
 }
 
@@ -226,17 +215,10 @@ void Server::list(Session& scmd) {
     scmd.gettok(path);
 
     std::stringstream listinfo;
-    if(getlist(getpath(config.path, path), listinfo)) {
-        scmd.sendmsg("OK");
-    } else {
-        scmd.sendmsg("ERR: Path not exisit");
-        return ;
-    }
+    MUST(getlist(getpath(config.path, path), listinfo), "ERR: Path not exisit", );
+    scmd.sendmsg("OK");
     Session datasession = buildstream(scmd);
-    if(!datasession.status()) {
-        scmd.sendmsg("ERR: Can't build");
-        return ;
-    }
+    MUST(datasession.status(),"ERR: Can't build",);
     scmd.sendmsg("BEGIN");
     datasession.sendstream(listinfo, listinfo.tellp());
 }

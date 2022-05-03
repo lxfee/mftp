@@ -6,6 +6,7 @@
 #include "logger.hpp"
 #include<unistd.h>
 using namespace std;
+bool debugflag = true;
 
 #define MAX_CONNECTIONS 5
 

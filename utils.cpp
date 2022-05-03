@@ -6,7 +6,6 @@
 #include <vector>
 #include <algorithm>
 
-
 std::string getcurrenttime() {
     // 基于当前系统的当前日期/时间
     time_t now = time(0);    
@@ -97,7 +96,12 @@ bool getlist(std::string path, std::ostream &list) {
     for(int i = 0; i < paths.size(); i++) {
         wide = std::max(wide, (int)paths[i].second.filename().string().size());
     }
+    wide = std::max(wide, 4);
     wide += 2;
+    list << "[type] ";
+    list << std::setw(20) << "size";
+    list << std::setw(wide) << "name";
+    list << std::endl;
     for(const auto& ppath : paths) {
         switch(ppath.first) {
             case 0:

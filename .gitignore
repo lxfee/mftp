@@ -4,3 +4,4 @@ test.cpp
 *.o
 server
 client
+tmp/*
