@@ -21,6 +21,7 @@ public:
 private:
     bool login(Session& scmd);
     void list(Session& scmd);
+    void getfile(Session& scmd);
     Session buildstream(Session& scmd);
     std::string user;
     std::string passwd;

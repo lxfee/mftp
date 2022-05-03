@@ -18,7 +18,7 @@ clientmain.o : clientmain.cpp
 	g++ -I$(idir) -c -g clientmain.cpp
 
 server.o : server.cpp
-	g++ -I$(idir) -c -g server.cpp
+	g++ -std=c++17 -I$(idir) -c -g server.cpp
 
 SocketLinux.o : platform/SocketLinux.cpp
 	g++ -I$(idir) -c -g platform/SocketLinux.cpp
@@ -30,7 +30,7 @@ utils.o : utils.cpp
 	g++ -std=c++17 -I$(idir) -c -g utils.cpp
 
 client.o : client.cpp
-	g++ -I$(idir) -c -g client.cpp
+	g++  -std=c++17 -I$(idir) -c -g client.cpp
 
 clean :
 	-rm -f *.o server client

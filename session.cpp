@@ -174,9 +174,10 @@ bool Session::expect(std::string exp) {
     return exp == rel;
 }
 
-void Session::readline(std::string& cmd) {
-    cmd = buffer;
-    std::reverse(cmd.begin(), cmd.end());
+void Session::readline(std::string& line) {
+    line = buffer;
+    while(isspace(line.back())) line.pop_back();
+    reverse(line.begin(), line.end());
 }
 
 void Session::nextline() {

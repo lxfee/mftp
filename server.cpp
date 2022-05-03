@@ -7,12 +7,13 @@
 #include <algorithm>
 #include <sstream>
 #include "logger.hpp"
+#include <fstream>
 #include "utils.h"
 
 /***********************server config****************************/
 
 using json = nlohmann::json;
-
+namespace fs = std::filesystem;
 
 ServerConfig::ServerConfig() {
     std::ifstream fin;
@@ -122,7 +123,7 @@ void Server::operator()(Session& scmd) {
             list(scmd);
         }
         else if(cmd == "GET") {
-
+            getfile(scmd);
         }
         else if(cmd == "PUT") {
 
@@ -139,7 +140,36 @@ void Server::operator()(Session& scmd) {
     }
 }
 
-
+void Server::getfile(Session& scmd) {
+    std::string target;
+    scmd.readline(target);
+    target = getpath(config.path, target);
+    if(!fs::exists(target)) {
+        scmd.sendmsg("ERR: path not exisit");
+        return ;
+    }
+    if(!fs::is_regular_file(target)) {
+        scmd.sendmsg("ERR: it is not a file");
+        return ;
+    } 
+    std::ifstream fin;
+    fin.open(target);
+    if(!fin) {
+        scmd.sendmsg("ERR: can not open file");
+        fin.close();
+        return ;
+    }
+    scmd.sendmsg("OK");
+    Session datasession = buildstream(scmd);
+    if(!datasession.status()) {
+        scmd.sendmsg("ERR: Can't build");
+        return ;
+    }
+    scmd.sendmsg("BEGIN");
+    datasession.sendstream(fin);
+    fin.close();
+    datasession.close();
+}
 
 void Server::list(Session& scmd) {
     std::string path;

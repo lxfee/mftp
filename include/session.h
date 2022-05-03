@@ -41,7 +41,7 @@ public:
 
     // 方便读取指令的方法
     void gettok(std::string& cmd);
-    void readline(std::string& cmd);
+    void readline(std::string& line);
     void nextline();
     bool expect(std::string exp);
 
