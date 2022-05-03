@@ -54,7 +54,8 @@ vector<string> cmds = {
     ,"bye"          , "关闭客户端"
     ,"time"         , "查询服务器时间"
     ,"get"          , "获得文件"
-    ,"send"         , "发送文件"
+    ,"put"          , "发送文件"
+    ,"run"          , "运行远程指令"
 };
 
 void printhelp() {
@@ -180,11 +181,11 @@ void getfile(Session& scmd) {
     cout << "path to save: ";
     nextline();
     readline(local);
+
     if(fs::exists(local)) {
         cout << "file exist" << endl;
         return ;
     }
-    
     ofstream fout;
     fout.open(local);
     if(!fout) {
@@ -199,17 +200,67 @@ void getfile(Session& scmd) {
         return ;
     }
     Session datasession = buildstream(scmd, mode);
-    if(!scmd.expect("BEGIN")) {
-        cout << "can not build data session" << endl;
-        return ;
-    }
     if(!datasession.status()) {
         cout << "error ocur!" << endl;
         return ;
     }
+    if(!scmd.expect("BEGIN")) {
+        cout << "can not build data session" << endl;
+        return ;
+    }
     datasession.recvstream(fout);
     fout.close();
-    cout << "file saved" << endl;
+    cout << "file saved: " + local << endl;
+}
+
+void putfile(Session& scmd) {
+    if(!scmd.status()) {
+        cout << "not connected" << endl;
+        return ;
+    }
+    string target, local;
+    while(1) {
+        readline(local);
+        if(!local.empty()) break;
+        cout << "local target: ";
+        nextline();
+    }
+    cout << "remote path to save: ";
+    nextline();
+    readline(target);
+
+    if(!fs::exists(local)) {
+        cout << "path not exisit" << endl;
+        return ;
+    }
+    if(!fs::is_regular_file(local)) {
+        cout << "ERR: it is not a file" << endl;
+        return ;
+    } 
+
+    std::ifstream fin;
+    fin.open(local);
+    if(!fin) {
+        cout << "ERR: can not open file" << endl;
+        fin.close();
+        return ;
+    }
+    scmd.sendmsg("PUT " + target);
+    if(!scmd.expect("OK")) {
+        cout << "request refused" << endl;
+        return ;
+    }
+    Session datasession = buildstream(scmd, mode);
+    if(!datasession.status()) {
+        cout << "error ocur!" << endl;
+        return ;
+    }
+    if(!scmd.expect("BEGIN")) {
+        cout << "can not build data session" << endl;
+        return ;
+    }
+    datasession.sendstream(fin);
+    fin.close();
 }
 
 void close(Session& scmd) {
@@ -276,4 +327,27 @@ void open(Session& scmd) {
             return ;
         }
     }
+}
+
+
+void runcmd(Session& scmd) {
+    if(!scmd.status()) {
+        cout << "not connected" << endl;
+        return ;
+    }
+    string cmd;
+    while(1) {
+        readline(cmd);
+        if(!cmd.empty()) break;
+        cout << "cmd: ";
+        nextline();
+    }
+    scmd.sendmsg("RUN " + cmd);
+    if(!scmd.expect("OK")) {
+        cout << "error ocr" << endl;
+        return ;
+    }
+    string result;
+    scmd.recvmsg(result);
+    cout << result << endl;
 }

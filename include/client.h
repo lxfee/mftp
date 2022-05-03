@@ -16,6 +16,10 @@ void gettime(Session& scmd);
 
 void getfile(Session& scmd);
 
+void putfile(Session& scmd);
+
+void runcmd(Session& scmd);
+
 void close(Session& scmd);
 
 void sync(Session& scmd);
@@ -25,7 +29,6 @@ void status(Session& scmd);
 void open(Session& scmd);
 
 extern std::string buffer;
-
 
 void gettok(std::string& cmd);
 void readline(std::string& line);

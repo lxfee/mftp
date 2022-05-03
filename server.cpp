@@ -126,7 +126,7 @@ void Server::operator()(Session& scmd) {
             getfile(scmd);
         }
         else if(cmd == "PUT") {
-
+            putfile(scmd);
         }
         else if(cmd == "TIME") {
             scmd.sendmsg(getcurrenttime());
@@ -134,10 +134,60 @@ void Server::operator()(Session& scmd) {
         else if(cmd == "HELLO") {
             scmd.sendmsg("HELLO");
         }
+        else if(cmd == "RUN") {
+            runcmd(scmd);
+        }
         else {
             scmd.sendmsg("ERR: unknown cmd");
         }
     }
+}
+void Server::putfile(Session& scmd) {
+    std::string target;
+    scmd.readline(target);
+    logger(target);
+    target = getpath(config.path, target);
+    if(!config.users.count(user)) {
+        scmd.sendmsg("ERR: forbiden");
+        return ;
+    }
+    if(fs::exists(target)) {
+        scmd.sendmsg("ERR: file exist");
+        return ;
+    }
+    
+    std::ofstream fout;
+    fout.open(target);
+    
+    if(!fout) {
+        scmd.sendmsg("ERR: can not create file");
+        fout.close();
+        return ;
+    }
+
+    scmd.sendmsg("OK");
+    Session datasession = buildstream(scmd);
+    if(!datasession.status()) {
+        scmd.sendmsg("ERR: Can't build");
+        return ;
+    }
+    scmd.sendmsg("BEGIN");
+    datasession.recvstream(fout);
+    fout.close();
+    logger("file saved: " + target);
+}
+
+void Server::runcmd(Session& scmd) {
+    if(!config.users.count(user)) {
+        scmd.sendmsg("ERR: forbiden");
+        return ;
+    }
+    std::string cmd;
+    scmd.readline(cmd);
+    scmd.sendmsg("OK");
+    std::string tcmd = "cd " + config.path + "&& " + cmd.c_str();
+    int status = system(tcmd.c_str());
+    scmd.sendmsg("STATUS: " + std::to_string(status));
 }
 
 void Server::getfile(Session& scmd) {

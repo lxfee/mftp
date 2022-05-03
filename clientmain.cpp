@@ -36,6 +36,12 @@ bool prasecmd(Session& scmd, string cmd) {
     else if(cmd == "get") {
         getfile(scmd);
     }
+    else if(cmd == "put") {
+        putfile(scmd);
+    }
+    else if(cmd == "run") {
+        runcmd(scmd);
+    }
     return true;
 }
 
