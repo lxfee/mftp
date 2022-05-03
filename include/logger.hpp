@@ -2,6 +2,7 @@
 #include <string>
 #include <iostream>
 #include <ctime>
+#include <iomanip>
 
 extern bool debugflag;
 
@@ -22,5 +23,27 @@ inline void logger(T1 msg, T2 id) {
         std::cout << time(0) << "\t";
         std::cout << "[" << " " << id << " " << "] " << "\t";
         std::cout << msg << std::endl;
+    }
+}
+
+template <class T1, class T2>
+inline void printprocess(int cur, int tot, T1 msg, T2 id) {
+    if(debugflag) {
+        std::cout << "\r";
+        std::cout << time(0) << "\t";
+        std::cout << "[" << " " << id << " " << "] " << "\t";
+        std::cout << msg << ": ";
+        double ratio = (double)cur / tot;
+        int wide = 40;
+        int done = wide * ratio;
+        std::cout << "[";
+        for(int i= 0; i < wide; i++) {
+            if(i < done) 
+                std::cout << "=";
+            else 
+                std::cout << " ";
+        }
+        std::cout << "]";
+        std::cout << std::setw(10) << std::setprecision(2) << std::fixed << ratio * 100; 
     }
 }

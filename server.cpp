@@ -204,10 +204,17 @@ void Server::getfile(Session& scmd) {
     Session datasession = buildstream(scmd);
     MUST(datasession.status(), "ERR: Can't build", );
     scmd.sendmsg("BEGIN");
-    datasession.sendstream(fin);
+    // 获得文件大小
+    fin.seekg(0, fin.end);
+    int fsize = fin.tellg();
+    fin.seekg(0, fin.beg);
+
+    datasession.sendstream(fin, fsize);
     fin.close();
+
     // 服务器主动关闭
-    datasession.close();
+    if(fsize == 0)
+        datasession.close();
 }
 
 void Server::list(Session& scmd) {

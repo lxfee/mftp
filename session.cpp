@@ -81,6 +81,7 @@ void Session::sendstream(std::istream& is, int size) {
     // 发送待发送的字节数
     sock.write(&size, 4);
     char buffer[BUFFER_SIZE];
+    int tot = size;
     
 
     if(size == 0) {
@@ -104,6 +105,7 @@ void Session::sendstream(std::istream& is, int size) {
             }
             size -= nbytes;
             nbytes = std::min(size, nbytes);
+            printprocess(tot - size, tot, "sending", target.port);
         } while(nbytes);
     }
 }
@@ -126,6 +128,7 @@ void Session::recvstream(std::ostream& os) {
     // 接收字节数
     int size;
     sock.read(&size, 4);
+    int tot = size;
     
     // 接收数据
     char buffer[BUFFER_SIZE];
@@ -143,6 +146,7 @@ void Session::recvstream(std::ostream& os) {
             os.write(buffer, nbytes);
             size -= nbytes;
             nbytes = std::min(size, (int)sizeof(buffer));
+            printprocess(tot - size, tot, "recving", target.port);
             if(!nbytes) break;
         }
     }

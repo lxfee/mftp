@@ -258,7 +258,12 @@ void putfile(Session& scmd) {
     Session datasession = buildstream(scmd, mode);
     MUST(datasession.status(), "error ocur!", );
     EXPECT("BEGIN", "can not build data session");
-    datasession.sendstream(fin);
+    // 获得文件大小
+    fin.seekg(0, fin.end);
+    int fsize = fin.tellg();
+    fin.seekg(0, fin.beg);
+
+    datasession.sendstream(fin, fsize);
     fin.close();
 }
 
