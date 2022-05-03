@@ -26,7 +26,7 @@ public:
 	int bind(Ipaddr addr);
 	int connect(Ipaddr addr);
 	int listen(int backlog);
-	int accept(Ipaddr& addr, Socket& sock);
+	Socket accept(Ipaddr& addr, int& status);
 	int shutdown(ShutdownType howto);
 	int read(void* buf, size_t nbytes);
 	int write(const void* buf, size_t nbytes);

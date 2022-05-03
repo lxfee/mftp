@@ -101,14 +101,15 @@ int Socket::listen(int backlog) {
 }
 
 
-int Socket::accept(Ipaddr& addr, Socket& sock) {
+Socket Socket::accept(Ipaddr& addr, int& status) {
     struct sockaddr_in tmpaddr;
     socklen_t addr_size = sizeof(tmpaddr);
-    int fd = ::accept(this->sock, (struct sockaddr*)&tmpaddr, &addr_size);
-    if(fd < 0) return fd;
-    sock.sock = fd;
+    status = ::accept(this->sock, (struct sockaddr*)&tmpaddr, &addr_size);
+    Socket sock(*this);
+    sock.sock = status;
+    if(status < 0) return sock;
     addrconvert(tmpaddr, addr);
-    return fd;
+    return sock;
 }
 
 int Socket::shutdown(ShutdownType howto) {

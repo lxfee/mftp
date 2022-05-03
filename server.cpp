@@ -201,7 +201,7 @@ Session Server::buildstream(Session& scmd) {
 
     } else {
         scmd.sendmsg("ERR: do not know which way");
-        return Session::nullsession();
+        return Session::closedsession();
     }
 }
 

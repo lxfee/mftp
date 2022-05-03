@@ -5,8 +5,7 @@
 #include <iostream>
 
 void Session::throwerror(std::string msg) {
-    if(mode != NOTCLOSE)
-        mode = CLOSE;
+    if(sstatus != CLOSED) sstatus = CLOSE;
     close();
     throw msg;
 }
@@ -18,22 +17,21 @@ int Session::wait() {
     return nbytes;
 }
 
-Session::Session() : mode(NOTCLOSE), buildstatus(-1) {}
+Session::Session() : sstatus(CLOSE) {}
+Session::Session(const Socket& sock) : sock(sock), sstatus(CLOSE) {}
 
 Session::Session(Session && session) noexcept :
     buffer(std::move(session.buffer)), 
     local(session.local),
     target(session.target), 
     sock(session.sock),
-    mode(session.mode),
-    buildstatus(session.buildstatus)
+    sstatus(session.sstatus)
 {
-    session.mode = NOTCLOSE;
-    session.buildstatus = -1;
+    session.sstatus = CLOSED;
 }
 
 Session::~Session() {
-    switch (mode) {
+    switch (sstatus) {
         case PASSIVE:
             logger("Wait session closed", target.port);
             wait();
@@ -45,7 +43,7 @@ Session::~Session() {
             break;
         case CLOSE:
             break;
-        case NOTCLOSE:
+        case CLOSED:
         default:
             return ;
     }
@@ -54,19 +52,18 @@ Session::~Session() {
 }
 
 void Session::close() {
-    switch (mode) {
+    switch (sstatus) {
+        case CLOSED:
+            return ;
         case CLOSE:
             break;
-        case NOTCLOSE:
-            return ;
         default:
             sock.shutdown(SD_WR);
             wait();
             break;
     }
     sock.close();
-    mode = NOTCLOSE;
-    buildstatus = -1;
+    sstatus = CLOSED;
     logger("Session closed", target.port);
 }
 
@@ -189,114 +186,103 @@ void Session::nextline() {
 
 // 判断会话是否有效
 bool Session::status() {
-    return buildstatus >= 0;
+    return sstatus != CLOSED;
 }
 
-Session Session::nullsession() {
-    return std::move(Session());
+bool Session::renew() {
+    switch (sstatus) {
+    case CLOSED:
+        sock = Socket();
+        sstatus = CLOSE;
+        break;
+    case CLOSE:
+        break;
+    default:
+        return false;
+    }
+    return true;
 }
 
-bool Session::starttargetsession(Ipaddr target, CLOSEMODE mode) {
-    if(status()) return false;
-    sock = Socket();
-    int flag = sock.connect(target);
-    logger(flag, "flag");
-    if(flag < 0) {
+
+Session Session::closedsession() {
+    Session sessoin = Session();
+    sessoin.close();
+    return std::move(sessoin);
+}
+
+bool Session::starttargetsession(Ipaddr target, STATUS mode) {
+    if(!renew()) return false;
+    if(sock.connect(target) < 0 || sock.getsockname(this->local) < 0) {
         close();
         return false;
     }
-    this->mode = mode;
     this->target = target;
-    sock.getsockname(this->local);
+    this->sstatus = (STATUS)mode;
     return true;
 }
 
-bool Session::startlocalsession(Ipaddr local, CLOSEMODE mode) {
-    if(status()) return false;
-    sock = Socket();
-    int flag = sock.bind(local);
-    if(flag < 0) {
+bool Session::startlocalsession(Ipaddr local, STATUS mode) {
+    if(!renew()) return false;
+    if(sock.bind(local) < 0 || sock.getsockname(this->local) < 0) {
         close();
         return false;
     }
-    this->mode = mode;
-    sock.getsockname(this->local);
+    this->sstatus = (STATUS)mode;
     return true;
 }
 
-bool Session::startsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
-    if(status()) return false;
-    sock = Socket();
-    int flag = sock.bind(local);
-    if(flag < 0) {
+bool Session::startsession(Ipaddr target, Ipaddr local, STATUS mode) {
+    if(!renew()) return false;
+    if(sock.bind(local) < 0 || sock.connect(target) < 0 || sock.getsockname(this->local) < 0) {
         close();
         return false;
     }
-    flag = sock.connect(target);
-    buildstatus = flag;
-    if(flag < 0) {
-        close();
-        return false;
-    }
-    this->mode = mode;
+    this->sstatus = (STATUS)mode;
     this->target = target;
-    sock.getsockname(this->local);
     return true;
 }
 
 
-Session Session::buildtargetsession(Ipaddr target, CLOSEMODE mode) {
-    Session session = nullsession();
+Session Session::buildtargetsession(Ipaddr target, STATUS mode) {
+    Session session;
     session.starttargetsession(target, mode);
     return std::move(session);
 }
 
-Session Session::buildlocalsession(Ipaddr local, CLOSEMODE mode) {
-    Session session = nullsession();
+Session Session::buildlocalsession(Ipaddr local, STATUS mode) {
+    Session session;
     session.startlocalsession(local, mode);
     return std::move(session);
 }
 
-
-Session Session::buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
-    Session session = nullsession();
+Session Session::buildsession(Ipaddr target, Ipaddr local, STATUS mode) {
+    Session session;
     session.startsession(target, local, mode);
     return std::move(session);
 }
 
-
-
-int Session::bind(Ipaddr local) {
-    int flag = sock.bind(local);
-    if(flag < 0) {
-        close();
-        return flag;
-    }
-    sock.getsockname(this->local);
-    return flag;
+bool Session::listen(int backlog) {
+    if(sstatus == CLOSED) return false;
+    return sock.listen(backlog) >= 0;
 }
 
-int Session::listen(int backlog) {
-    return sock.listen(backlog);
-}
-
-Session Session::accept(int sec, CLOSEMODE mode) {
-    if(!status()) return nullsession();
+Session Session::accept(int sec, STATUS mode) {
+    if(sstatus == CLOSED) return closedsession();
     if(sec) sock.setrecvtimeout(sec);
     Ipaddr target;
-    Socket nsock;
-    Session session;
-    int flag = sock.accept(target, nsock);
-    session.buildstatus = flag;
+    int flag;
+    Socket nsock = sock.accept(target, flag);
     if(flag < 0) {
-        session.close();
-        return std::move(session);
+        return closedsession();
     } 
     nsock.setrecvtimeout(0);
-    session.sock = nsock;
+    Session session(nsock);
     session.target = target;
-    nsock.getsockname(session.local);
-    session.mode = mode;
+    if(nsock.getsockname(session.local) < 0) {
+        session.close();
+        return std::move(session);
+    }
+    session.sstatus = (STATUS)mode;
     return std::move(session);
 }
 

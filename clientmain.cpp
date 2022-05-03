@@ -144,7 +144,7 @@ bool prasecmd(Session& scmd, string cmd) {
 int main() {
     // init
     string cmd;
-    Session scmd = Session::nullsession();
+    Session scmd = Session::closedsession();
     mode = PASV;
 
     while(1) {
