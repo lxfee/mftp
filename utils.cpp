@@ -72,4 +72,19 @@ bool getlist(std::string path, std::ostream &list) {
     return true;
 }
 
-
+// only support ipv4
+bool parseIp(Ipaddr& addr, std::string ip) {
+    int p = -1;
+    for(int i = 0; i < ip.size(); i++) {
+        if(ip[i] == ':') {
+            p = i;
+            break;
+        }
+    }
+    if(p == -1) return false;
+    std::string ipaddr = ip.substr(0, p);
+    std::string port = ip.substr(p + 1);
+    addr.port = atoi(port.c_str());
+    addr.setaddr(ipaddr);
+    return true;
+}

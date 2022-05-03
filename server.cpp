@@ -13,23 +13,6 @@
 
 using json = nlohmann::json;
 
-// only support ipv4
-static bool parseIp(Ipaddr& addr, std::string ip) {
-    int p = -1;
-    
-    for(int i = 0; i < ip.size(); i++) {
-        if(ip[i] == ':') {
-            p = i;
-            break;
-        }
-    }
-    if(p == -1) return false;
-    std::string ipaddr = ip.substr(0, p);
-    std::string port = ip.substr(p + 1);
-    addr.port = atoi(port.c_str());
-    addr.setaddr(ipaddr);
-    return true;
-}
 
 ServerConfig::ServerConfig() {
     std::ifstream fin;
@@ -124,7 +107,7 @@ ServerConfig Server::config;
 
 void Server::operator()(Session& scmd) {
     // init
-    // if(!login(scmd)) return ;
+    if(!login(scmd)) return ;
 
     std::string cmd;
     while(1) {
@@ -151,7 +134,6 @@ void Server::operator()(Session& scmd) {
         else if(cmd == "HELLO") {
             scmd.sendmsg("HELLO");
         }
-        
         else {
             scmd.sendmsg("ERR: unknown cmd");
         }
@@ -225,43 +207,37 @@ Session Server::buildstream(Session& scmd) {
 
 bool Server::login(Session& scmd) {
     std::string cmd;
-    scmd.sendmsg("登录");
+    scmd.sendmsg("LOGIN");
 
     // USER
-    scmd.nextline();
-    scmd.gettok(cmd);
-
-    if(cmd != "USER") {
-        scmd.sendmsg("ERR: expect USER, connect shut");
+    if(!scmd.expect("USER")) {
+        scmd.sendmsg("ERR: expect USER");
         scmd.close();
         return false;
     }
     scmd.gettok(cmd);
     if(cmd == "anonymous" && !config.allowAnonymous){
-        scmd.sendmsg("ERR: anonymous is not allow, connect shut");
+        scmd.sendmsg("ERR: anonymous is not allow");
         scmd.close();
         return false;
     }
     if(cmd != "anonymous" && !config.users.count(cmd)) {
-        scmd.sendmsg("ERR: user not exist, connect shut");
+        scmd.sendmsg("ERR: user not exist");
         scmd.close();
         return false;
     }
     user = cmd;
     scmd.sendmsg("OK");
     
-    
     // PASSWORD 
-    scmd.nextline();
-    scmd.gettok(cmd);
-    if(cmd != "PASSWORD") {
-        scmd.sendmsg("ERR: expect PASSWORD, connect shut");
+    if(!scmd.expect("PASSWORD")) {
+        scmd.sendmsg("ERR: expect PASSWORD");
         scmd.close();
         return false;
     }
     scmd.gettok(cmd);
     if(user != "anonymous" && config.users.at(user) != cmd)  {
-        scmd.sendmsg("ERR: authentication failed, connect shut");
+        scmd.sendmsg("ERR: authentication failed");
         scmd.close();
         return false;
     }

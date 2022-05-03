@@ -8,7 +8,7 @@ using ADDR_T = unsigned int;
 
 #define panic(msg) std::cerr << msg << std::endl; assert(0)
 
-enum ShutdownType {SD_RD, SD_WR, SD_RDWR};
+enum ShutdownType {SD_RD = 1, SD_WR = 2, SD_RDWR = 3};
 
 struct Ipaddr {
 	Ipaddr();

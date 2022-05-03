@@ -44,7 +44,7 @@ void serverthread(Session scmd) {
         Server server;
         try {
             server(scmd);
-        } catch(const char* msg) {
+        } catch(string msg) {
             logger("Session disconnected");
         }
         decthread();

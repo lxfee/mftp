@@ -4,7 +4,12 @@
 #include <exception>
 #include <iostream>
 
-#define error(msg) {buildstatus = -1; throw msg;}
+void Session::throwerror(std::string msg) {
+    if(mode != NOTCLOSE)
+        mode = CLOSE;
+    close();
+    throw msg;
+}
 
 int Session::wait() {
     int nbytes;
@@ -12,6 +17,7 @@ int Session::wait() {
     while((nbytes = sock.read(&ch, 1)) > 0);
     return nbytes;
 }
+
 Session::Session() : mode(NOTCLOSE), buildstatus(-1) {}
 
 Session::Session(Session && session) noexcept :
@@ -69,10 +75,9 @@ void Session::sendmsg(const std::string& msg) {
     std::string tmsg = msg;
     if(tmsg.back() != '\n') tmsg.push_back('\n'); // 换行符为结尾
     if(sock.write(tmsg.c_str(), tmsg.size()) < 0) {
-        error("session closed");
+        throwerror("session closed");
     }
 }
-
 
 // size = 0代表保持发送，直到会话被关闭
 void Session::sendstream(std::istream& is, int size) {
@@ -88,7 +93,7 @@ void Session::sendstream(std::istream& is, int size) {
             is.read(buffer, sizeof(buffer));
             nbytes = is.gcount();
             if(sock.write(buffer, nbytes) < 0) {
-                error("session closed");
+                throwerror("session closed");
             }
         } while(nbytes);
     } else {
@@ -98,14 +103,13 @@ void Session::sendstream(std::istream& is, int size) {
             is.read(buffer, nbytes);
             nbytes = is.gcount();
             if(sock.write(buffer, nbytes) < 0) {
-                error("session closed");
+                throwerror("session closed");
             }
             size -= nbytes;
             nbytes = std::min(size, nbytes);
         } while(nbytes);
     }
 }
-
 
 void Session::recvmsg(std::string& msg) {
     msg.clear();
@@ -117,7 +121,7 @@ void Session::recvmsg(std::string& msg) {
     }
     logger("RECV: " + msg, target.port);
     if(nbytes <= 0) {
-        error("session closed");
+        throwerror("session closed");
     }
 }
 
@@ -146,7 +150,7 @@ void Session::recvstream(std::ostream& os) {
         }
     }
     if(nbytes < 0) {
-        error("session closed");
+        throwerror("session closed");
     }
 }
 
@@ -165,6 +169,14 @@ void Session::gettok(std::string& cmd) {
     }
 }
 
+// read a line, check if first token is exp
+bool Session::expect(std::string exp) {
+    nextline();
+    std::string rel;
+    gettok(rel);
+    return exp == rel;
+}
+
 void Session::readline(std::string& cmd) {
     cmd = buffer;
     std::reverse(cmd.begin(), cmd.end());
@@ -177,8 +189,7 @@ void Session::nextline() {
 
 // 判断会话是否有效
 bool Session::status() {
-    if(buildstatus < 0) return false;
-    return true;
+    return buildstatus >= 0;
 }
 
 Session Session::nullsession() {
@@ -187,9 +198,11 @@ Session Session::nullsession() {
 
 bool Session::starttargetsession(Ipaddr target, CLOSEMODE mode) {
     if(status()) return false;
+    sock = Socket();
     int flag = sock.connect(target);
-    buildstatus = flag;
+    logger(flag, "flag");
     if(flag < 0) {
+        close();
         return false;
     }
     this->mode = mode;
@@ -200,9 +213,10 @@ bool Session::starttargetsession(Ipaddr target, CLOSEMODE mode) {
 
 bool Session::startlocalsession(Ipaddr local, CLOSEMODE mode) {
     if(status()) return false;
+    sock = Socket();
     int flag = sock.bind(local);
-    buildstatus = flag;
     if(flag < 0) {
+        close();
         return false;
     }
     this->mode = mode;
@@ -212,13 +226,16 @@ bool Session::startlocalsession(Ipaddr local, CLOSEMODE mode) {
 
 bool Session::startsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
     if(status()) return false;
+    sock = Socket();
     int flag = sock.bind(local);
     if(flag < 0) {
+        close();
         return false;
     }
     flag = sock.connect(target);
     buildstatus = flag;
     if(flag < 0) {
+        close();
         return false;
     }
     this->mode = mode;
@@ -229,20 +246,20 @@ bool Session::startsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
 
 
 Session Session::buildtargetsession(Ipaddr target, CLOSEMODE mode) {
-    Session session;
+    Session session = nullsession();
     session.starttargetsession(target, mode);
     return std::move(session);
 }
 
 Session Session::buildlocalsession(Ipaddr local, CLOSEMODE mode) {
-    Session session;
+    Session session = nullsession();
     session.startlocalsession(local, mode);
     return std::move(session);
 }
 
 
 Session Session::buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
-    Session session;
+    Session session = nullsession();
     session.startsession(target, local, mode);
     return std::move(session);
 }
@@ -252,6 +269,7 @@ Session Session::buildsession(Ipaddr target, Ipaddr local, CLOSEMODE mode) {
 int Session::bind(Ipaddr local) {
     int flag = sock.bind(local);
     if(flag < 0) {
+        close();
         return flag;
     }
     sock.getsockname(this->local);
@@ -263,15 +281,15 @@ int Session::listen(int backlog) {
 }
 
 Session Session::accept(int sec, CLOSEMODE mode) {
-    if(sec) {
-        sock.setrecvtimeout(sec);
-    }
+    if(!status()) return nullsession();
+    if(sec) sock.setrecvtimeout(sec);
     Ipaddr target;
     Socket nsock;
     Session session;
     int flag = sock.accept(target, nsock);
     session.buildstatus = flag;
     if(flag < 0) {
+        session.close();
         return std::move(session);
     } 
     nsock.setrecvtimeout(0);

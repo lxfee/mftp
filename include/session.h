@@ -25,6 +25,8 @@ public:
     Ipaddr getlocaladdr();
     Ipaddr gettargetaddr();
 
+    void throwerror(std::string msg);
+
     Session(const Session &) = delete;
     Session(Session &&) noexcept ;
     ~Session();
@@ -35,9 +37,11 @@ public:
     void sendstream(std::istream& os, int size = 0);
     void recvstream(std::ostream& is);
 
+    // read op
     void gettok(std::string& cmd);
     void readline(std::string& cmd);
     void nextline();
+    bool expect(std::string exp);
 
     bool status();
     

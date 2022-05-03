@@ -7,8 +7,8 @@ all : client server
 server: servermain.o $(objs) server.o
 	g++ -g $(objs) servermain.o server.o -o server -lpthread
 
-client : clientmain.o $(objs)
-	g++ -g clientmain.o $(objs) -o client
+client : clientmain.o $(objs) client.o
+	g++ -g clientmain.o $(objs) client.o -o client
 
 
 servermain.o : servermain.cpp
@@ -28,6 +28,9 @@ session.o : session.cpp
 
 utils.o : utils.cpp
 	g++ -std=c++17 -I$(idir) -c -g utils.cpp
+
+client.o : client.cpp
+	g++ -I$(idir) -c -g client.cpp
 
 clean :
 	-rm -f *.o server client
