@@ -29,6 +29,8 @@ static void addrconvert(const Ipaddr& from, struct sockaddr_in& to) {
     to.sin_addr.s_addr = (uint32_t)from.addr;
 }
 
+
+
 static void addrconvert(const struct sockaddr_in& from, Ipaddr& to) {
     to.addr = from.sin_addr.s_addr;
     to.port = ntohs(from.sin_port);
@@ -48,6 +50,9 @@ std::string Ipaddr::getaddr() {
 }
 void Ipaddr::setaddr(std::string addr) {
     this->addr = inet_addr(addr.c_str());
+}
+std::string Ipaddr::to_string() {
+    return getaddr() + ":" + std::to_string(port);
 }
 
 Socket::Socket() {
