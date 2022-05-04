@@ -69,11 +69,16 @@ void Session::close() {
 
 void Session::sendmsg(const std::string& msg) {
     logger("SEND: " + msg, target.port);
-    std::string tmsg = msg;
-    if(tmsg.back() != '\n') tmsg.push_back('\n'); // 换行符为结尾
-    if(sock.write(tmsg.c_str(), tmsg.size()) < 0) {
+    if(sock.write(msg.c_str(), msg.size()) < 0) {
         throwerror("session closed");
     }
+    // 换行符为结尾
+    if(msg.back() != '\n') {
+        if(sock.write("\n", 1) < 0) {
+            throwerror("session closed");
+        }        
+    }
+
 }
 
 // size = 0代表保持发送，直到会话被关闭

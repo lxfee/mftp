@@ -44,6 +44,6 @@ inline void printprocess(int cur, int tot, T1 msg, T2 id) {
                 std::cout << " ";
         }
         std::cout << "]";
-        std::cout << std::setw(10) << std::setprecision(2) << std::fixed << ratio * 100; 
+        std::cout << std::setw(10) << std::setprecision(2) << std::fixed << ratio * 100 << "%"; 
     }
 }

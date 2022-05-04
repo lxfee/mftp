@@ -12,7 +12,7 @@
 
 
 
-static int shutdown(SDType howto) {
+static int shutdownconvert(SDType howto) {
     switch(howto) {
         case SD_RD  : return SHUT_RD; 
         case SD_WR  : return SHUT_WR;
@@ -113,7 +113,7 @@ Socket Socket::accept(Ipaddr& addr, int& status) {
 }
 
 int Socket::shutdown(SDType howto) {
-    return ::shutdown(sock, SDType(howto));
+    return ::shutdown(sock, shutdownconvert(howto));
 }
 
 int Socket::read(void* buf, size_t nbytes) {

@@ -114,7 +114,7 @@ Socket Socket::accept(Ipaddr& addr, int& status) {
 }
 
 int Socket::shutdown(SDType howto) {
-    return ::shutdown(sock, SDType(howto));
+    return ::shutdown(sock, shutdownconvert(howto));
 }
 
 int Socket::read(void* buf, size_t nbytes) {
