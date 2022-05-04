@@ -221,7 +221,7 @@ void gettime(Session& scmd) {
     scmd.sendmsg("TIME");
     string time;
     scmd.recvmsg(time);
-    cout << "时间: " << time << endl;
+    cout << "TIME: " << time << endl;
 }
 
 void getfile(Session& scmd) {

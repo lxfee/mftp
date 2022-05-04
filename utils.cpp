@@ -24,14 +24,14 @@ std::string getcurrenttime() {
     std::stringstream timestr;
 
     // 输出 tm 结构的各个组成部分
-    timestr << 1900 + ltm->tm_year << "年";
-    timestr << 1 + ltm->tm_mon << "月";
-    timestr <<  ltm->tm_mday << "日 ";
+    timestr << 1900 + ltm->tm_year << "Y ";
+    timestr << 1 + ltm->tm_mon << "M ";
+    timestr <<  ltm->tm_mday << "D ";
     timestr << ltm->tm_hour << ":";
     timestr << ltm->tm_min << ":";
     timestr << ltm->tm_sec << "\n";
     getline(timestr, res);
-    logger(res, "时间");
+    logger(res, "TIME");
     return res;
 }
     
