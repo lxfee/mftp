@@ -5,6 +5,9 @@
 #include <ctime>
 #include "logger.hpp"
 #include<unistd.h>
+#ifdef WINDOWS
+#include <winsock2.h>
+#endif
 using namespace std;
 bool debugflag = true;
 
@@ -46,6 +49,7 @@ void serverthread(Session scmd) {
         try {
             server(scmd);
         } catch(string msg) {
+            logger(msg);
             logger("Session disconnected");
         }
         decthread();
@@ -55,7 +59,8 @@ void serverthread(Session scmd) {
 
 int main() {
     #ifdef WINDOWS
-    WSAStart();
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
     #endif
 
     Session localsession = Session::buildlocalsession(Server::config.addr, CLOSE);
@@ -82,6 +87,6 @@ int main() {
     }
 
     #ifdef WINDOWS
-    WSAClean();
+    WSACleanup();
     #endif
 }

@@ -230,7 +230,7 @@ void getfile(Session& scmd) {
     MUSTNOT(fs::exists(local), "file exist", );
     
     ofstream fout;
-    fout.open(local);
+    fout.open(local, ios::binary);
     MUST(fout, "can not create file", fout.close());
 
     scmd.sendmsg("GET " + remote);
@@ -255,7 +255,8 @@ void putfile(Session& scmd) {
     MUST(fs::is_regular_file(local), "ERR: it is not a file", );
 
     std::ifstream fin;
-    fin.open(local);
+    // 要以二进制方式传输，不然可能造成传输中断
+    fin.open(local, ios::binary);
     MUST(fin, "ERR: can not open file", fin.close());
     
     scmd.sendmsg("PUT " + remote);

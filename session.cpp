@@ -6,6 +6,7 @@
 #include <cassert>
 
 void Session::throwerror(std::string msg) {
+    msg = "[error]" + msg;
     if(sstatus != CLOSED) sstatus = CLOSE;
     close();
     throw msg;
@@ -86,6 +87,7 @@ void Session::sendmsg(const std::string& msg) {
 void Session::sendstream(std::istream& is, int size) {
     // 发送待发送的字节数
     sock.write(&size, 4);
+    logger(size, "send size");
     char buffer[BUFFER_SIZE];
     int tot = size;
     int nbytes;
@@ -96,10 +98,12 @@ void Session::sendstream(std::istream& is, int size) {
         do {
             is.read(buffer, sizeof(buffer));
             nbytes = is.gcount();
+            logger(nbytes, "send - from file");
             if(nbytes <= 0) break;
-            if(sock.write(buffer, nbytes) < 0) {
+            if((nbytes = sock.write(buffer, nbytes)) < 0) {
                 throwerror("session closed");
             }
+            logger(nbytes, "send - to socket");
         } while(nbytes);
     } else {
         nbytes = std::min((int)sizeof(buffer), size);
@@ -108,9 +112,13 @@ void Session::sendstream(std::istream& is, int size) {
             is.read(buffer, nbytes);
             nbytes = is.gcount();
             if(nbytes <= 0) break;
-            if(sock.write(buffer, nbytes) < 0) {
+
+            // logger(nbytes, "send - from file");
+            if((nbytes = sock.write(buffer, nbytes)) < 0) {
                 throwerror("session closed");
             }
+            // logger(nbytes, "send - to socket");
+
             size -= nbytes;
             nbytes = std::min(size, nbytes);
             printprocess(tot - size, tot, "sending", target.port);
@@ -141,7 +149,8 @@ void Session::recvstream(std::ostream& os) {
     int size;
     sock.read(&size, 4);
     int tot = size;
-    
+    logger(size, "recv size");
+
     // 接收数据
     char buffer[BUFFER_SIZE];
     int nbytes = std::min(size, (int)sizeof(buffer));
@@ -150,14 +159,18 @@ void Session::recvstream(std::ostream& os) {
     if(size == 0) {
         // 未指明数据大小
         while((nbytes = sock.read(buffer, sizeof(buffer))) > 0) {
+            logger(nbytes, "recv - from socket");
             os.write(buffer, nbytes);
         }
+
     } else {
         // 接收特定数量字节
         while((nbytes = sock.read(buffer, nbytes)) > 0) {
+            // logger(nbytes, "recv - from socket");
             os.write(buffer, nbytes);
             size -= nbytes;
             nbytes = std::min(size, (int)sizeof(buffer));
+
             printprocess(tot - size, tot, "recving", target.port);
             if(!nbytes) break;
             assert(nbytes >= 0);

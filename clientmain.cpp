@@ -6,8 +6,11 @@
 #include "client.h"
 #include <vector>
 #include <iomanip>
+#ifdef WINDOWS
+#include <winsock2.h>
+#endif
 using namespace std;
-bool debugflag = false;
+bool debugflag = true;
 
 extern CONNECTMODE mode;
 
@@ -60,7 +63,8 @@ bool prasecmd(Session& scmd, string cmd) {
 
 int main() {
     #ifdef WINDOWS
-    WSAStart();
+    WSADATA wsaData;
+    WSAStartup(MAKEWORD(2, 2), &wsaData);
     #endif
 
     string cmd;
@@ -73,11 +77,13 @@ int main() {
         try {
             if(!prasecmd(scmd, cmd)) break;
         } catch(string msg) {
-            cout << "Session closed" << endl;
+            logger(msg);
+            logger("Session disconnected");
+            cout << "Session disconnected" << endl;
         }
     }
 
     #ifdef WINDOWS
-    WSAClean();
+    WSACleanup();
     #endif
 }

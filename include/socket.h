@@ -6,8 +6,6 @@
 #ifdef WINDOWS
 #include <winsock2.h>
 using SOCK_T = SOCKET;
-void WSAStart();
-void WSAClean();
 #endif
 #ifdef LINUX
 using SOCK_T = int;

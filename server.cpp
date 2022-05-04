@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "socket.h"
 
+
 /***********************server config****************************/
 
 using json = nlohmann::json;
@@ -167,7 +168,7 @@ void Server::putfile(Session& scmd) {
     MUSTNOT(fs::exists(savepath), "ERR: file exist", );
     
     std::ofstream fout;
-    fout.open(savepath);
+    fout.open(savepath, std::ios::binary);
     MUST(fout, "ERR: can not create file", fout.close());
 
     scmd.sendmsg("OK");
@@ -197,7 +198,7 @@ void Server::getfile(Session& scmd) {
     MUST(fs::is_regular_file(filepath), "ERR: it is not a file",);
 
     std::ifstream fin;
-    fin.open(filepath);
+    fin.open(filepath, std::ios::binary);
     MUST(fin, "ERR: can not open file", fin.close());
     scmd.sendmsg("OK");
     Session datasession = buildstream(scmd);

@@ -3,16 +3,9 @@
 #include <iostream>
 #include <cassert>
 
-void WSAStart() {
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
-}
 
-void WSAClean() {
-    WSACleanup();
-}
 
-static int shutdown(SDType howto) {
+static int shutdownconvert(SDType howto) {
     switch(howto) {
         case SD_RD  : return SD_RECEIVE; 
         case SD_WR  : return SD_SEND;
