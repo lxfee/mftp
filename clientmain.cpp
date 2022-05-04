@@ -10,7 +10,7 @@
 #include <winsock2.h>
 #endif
 using namespace std;
-bool debugflag = true;
+bool debugflag = false;
 
 extern CONNECTMODE mode;
 
