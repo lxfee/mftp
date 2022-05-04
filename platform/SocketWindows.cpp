@@ -91,7 +91,7 @@ int Socket::checkreadable(int sec) {
     // 如果不可读/写/无出错就阻塞
     // 阻塞时间由第5个参数决定，NULL代表一直阻塞
     // 第一个参数填0接口，听说是为了和linux兼容
-    // 返回值为准备好的套接字的个数
+    // 返回值为准备好的套接字的情况
     return ::select(0, &socks, NULL, NULL, &timeout);
 }
 

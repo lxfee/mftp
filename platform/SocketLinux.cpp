@@ -87,18 +87,16 @@ int Socket::getsockname(Ipaddr& addr) {
 
 
 int Socket::checkreadable(int sec) {
+    // linux 下 select用法和windows有所不同，见
+    // https://www.cnblogs.com/skyfsm/p/7079458.html
     struct timeval timeout;
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
     // fd_set: 套接字集合
     fd_set socks;
-    socks.fds_bits[0] = sock;
-    // select函数可以观察套接字集合中是否可读可写或出错（从第2~4参数传入套接字集合）
-    // 如果不可读/写/无出错就阻塞
-    // 阻塞时间由第5个参数决定，NULL代表一直阻塞
-    // 第一个参数填0接口，听说是为了和linux兼容
-    // 返回值为准备好的套接字的个数
-    return ::select(1, &socks, NULL, NULL, &timeout);
+    FD_ZERO(&socks);
+    FD_SET(sock, &socks);
+    return ::select(sock + 1, &socks, NULL, NULL, &timeout);
 }
 
 int Socket::checkwriteable(int sec) {
@@ -106,16 +104,20 @@ int Socket::checkwriteable(int sec) {
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
     fd_set socks;
-    socks.fds_bits[0] = sock;
-    return ::select(1, NULL, &socks, NULL, &timeout);
+    FD_ZERO(&socks);
+    FD_SET(sock, &socks);
+    return ::select(sock + 1, NULL, &socks, NULL, &timeout);
 }
+
+
 int Socket::checkerro(int sec) {
     struct timeval timeout;
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
     fd_set socks;
-    socks.fds_bits[0] = sock;
-    return ::select(1, NULL, NULL, &socks, &timeout);
+    FD_ZERO(&socks);
+    FD_SET(sock, &socks);
+    return ::select(sock + 1, NULL, NULL, &socks, &timeout);
 }
 
 int Socket::listen(int backlog) {
