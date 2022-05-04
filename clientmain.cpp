@@ -79,12 +79,12 @@ int main() {
     string cmd;
     Session scmd = Session::closedsession();
     while(1) {
-        sync(scmd); // 同步
-        cout << "mftp> ";
-        nextline();
-        gettok(cmd);
-        if(cmd.empty()) continue;
         try {
+            sync(scmd); // 同步
+            cout << "mftp> ";
+            nextline();
+            gettok(cmd);
+            if(cmd.empty()) continue;
             if(!prasecmd(scmd, cmd)) break;
         } catch(string msg) {
             logger(msg);
