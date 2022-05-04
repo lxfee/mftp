@@ -43,8 +43,9 @@ public:
 	int recvfrom(void* buf, size_t nbytes, Ipaddr& from);
 	int sendto(void *buf, size_t nbytes, Ipaddr to);
 	int getsockname(Ipaddr& ipaddr);
-	int setsendtimeout(int sec);
-	int setrecvtimeout(int sec);
+	int checkreadable(int sec);
+	int checkwriteable(int sec);
+	int checkerro(int sec);
 
 private:
 	SOCK_T sock;		// sock套接字

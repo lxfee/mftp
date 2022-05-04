@@ -299,14 +299,18 @@ bool Session::listen(int backlog) {
 
 Session Session::accept(int sec, STATUS mode) {
     if(sstatus == CLOSED) return closedsession();
-    if(sec) sock.setrecvtimeout(sec);
+    
     Ipaddr target;
     int flag;
+    if(sec) {
+        if(!sock.checkreadable(sec)) {
+            return closedsession();
+        }
+    }
     Socket nsock = sock.accept(target, flag);
     if(flag < 0) {
         return closedsession();
     } 
-    nsock.setrecvtimeout(0);
     Session session(nsock);
     session.target = target;
     if(nsock.getsockname(session.local) < 0) {

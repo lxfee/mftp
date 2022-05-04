@@ -243,7 +243,7 @@ Session Server::buildstream(Session& scmd) {
         local.port++; // 数据端口 = 命令端口 + 1
         Session session = Session::buildsession(target, local, PASSIVE);
         if(!session.status()) {
-            logger("ERR: can not build data connection", "buildstream");
+            logger("ERR: can not build data connection", target.to_string());
         }
         return std::move(session);
 
