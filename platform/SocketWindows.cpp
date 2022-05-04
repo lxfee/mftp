@@ -33,6 +33,10 @@ Ipaddr::Ipaddr(const std::string &addr, int port) : port(port) {
     this->addr = inet_addr(addr.c_str());
 }
 
+std::string Ipaddr::to_string() {
+    return getaddr() + ":" + std::to_string(port);
+}
+
 std::string Ipaddr::getaddr() {
     in_addr taddr;
     taddr.s_addr = addr;

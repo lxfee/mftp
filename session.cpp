@@ -35,7 +35,7 @@ Session::Session(Session && session) noexcept :
 Session::~Session() {
     switch (sstatus) {
         case PASSIVE:
-            logger("Wait session closed", target.port);
+            logger("Wait session closed", target.to_string());
             wait();
             sock.shutdown(SD_WR);
             break;
@@ -50,7 +50,7 @@ Session::~Session() {
             return ;
     }
     sock.close();
-    logger("Session closed", target.port);
+    logger("Session closed", target.to_string());
 }
 
 void Session::close() {
@@ -66,11 +66,11 @@ void Session::close() {
     }
     sock.close();
     sstatus = CLOSED;
-    logger("Session closed", target.port);
+    logger("Session closed", target.to_string());
 }
 
 void Session::sendmsg(const std::string& msg) {
-    logger("SEND: " + msg, target.port);
+    logger("SEND: " + msg, target.to_string());
     if(sock.write(msg.c_str(), msg.size()) < 0) {
         throwerror("session closed");
     }
@@ -121,7 +121,7 @@ void Session::sendstream(std::istream& is, int size) {
 
             size -= nbytes;
             nbytes = std::min(size, nbytes);
-            printprocess(tot - size, tot, "sending", target.port);
+            printprocess(tot - size, tot, "sending", target.to_string());
             assert(nbytes >= 0);
         } while(nbytes);
     }
@@ -138,7 +138,7 @@ void Session::recvmsg(std::string& msg) {
         if(ch == '\n') break;
         msg.push_back(ch);
     }
-    logger("RECV: " + msg, target.port);
+    logger("RECV: " + msg, target.to_string());
     if(nbytes <= 0) {
         throwerror("session closed");
     }
@@ -171,7 +171,7 @@ void Session::recvstream(std::ostream& os) {
             size -= nbytes;
             nbytes = std::min(size, (int)sizeof(buffer));
 
-            printprocess(tot - size, tot, "recving", target.port);
+            printprocess(tot - size, tot, "recving", target.to_string());
             if(!nbytes) break;
             assert(nbytes >= 0);
         }

@@ -2,6 +2,7 @@
 #pragma once
 #include <string>
 #include <memory>
+#include <iostream>
 
 #ifdef WINDOWS
 #include <winsock2.h>
@@ -25,6 +26,7 @@ struct Ipaddr {
 	int port;
 	// warning: do not set addr manually
 	ADDR_T addr;
+	std::string to_string();
 };
 
 class Socket {

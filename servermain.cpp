@@ -70,7 +70,7 @@ int main() {
         return 1;
     } 
     localsession.listen(MAX_CONNECTIONS);
-    logger("Server listening on " + localsession.getlocaladdr().getaddr(), localsession.getlocaladdr().port);
+    logger("Server listening on " + localsession.getlocaladdr().to_string(), localsession.getlocaladdr().to_string());
     
 
     // thread tmpth(printthread);
