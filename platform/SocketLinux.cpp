@@ -23,7 +23,7 @@ static int shutdownconvert(SDType howto) {
 }
 
 static void addrconvert(const Ipaddr& from, struct sockaddr_in& to) {
-    // memset(&to, 0, sizeof(struct sockaddr_in));
+    memset(&to, 0, sizeof(struct sockaddr_in));
     to.sin_family = AF_INET;
     to.sin_port = htons(from.port);
     to.sin_addr.s_addr = (uint32_t)from.addr;

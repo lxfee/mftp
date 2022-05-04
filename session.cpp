@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <exception>
 #include <iostream>
+#include <cassert>
 
 void Session::throwerror(std::string msg) {
     if(sstatus != CLOSED) sstatus = CLOSE;
@@ -87,31 +88,37 @@ void Session::sendstream(std::istream& is, int size) {
     sock.write(&size, 4);
     char buffer[BUFFER_SIZE];
     int tot = size;
-    
+    int nbytes;
 
     if(size == 0) {
-        int nbytes = sizeof(buffer);
+        nbytes = sizeof(buffer);
         // 发到流发完为止
         do {
             is.read(buffer, sizeof(buffer));
             nbytes = is.gcount();
+            if(nbytes <= 0) break;
             if(sock.write(buffer, nbytes) < 0) {
                 throwerror("session closed");
             }
         } while(nbytes);
     } else {
-        int nbytes = std::min((int)sizeof(buffer), size);
+        nbytes = std::min((int)sizeof(buffer), size);
         // 发送特定数量字节
         do {
             is.read(buffer, nbytes);
             nbytes = is.gcount();
+            if(nbytes <= 0) break;
             if(sock.write(buffer, nbytes) < 0) {
                 throwerror("session closed");
             }
             size -= nbytes;
             nbytes = std::min(size, nbytes);
             printprocess(tot - size, tot, "sending", target.port);
+            assert(nbytes >= 0);
         } while(nbytes);
+    }
+    if(nbytes < 0) {
+        throwerror("session closed");
     }
 }
 
@@ -153,6 +160,7 @@ void Session::recvstream(std::ostream& os) {
             nbytes = std::min(size, (int)sizeof(buffer));
             printprocess(tot - size, tot, "recving", target.port);
             if(!nbytes) break;
+            assert(nbytes >= 0);
         }
     }
     if(nbytes < 0) {
