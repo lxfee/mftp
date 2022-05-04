@@ -297,17 +297,12 @@ bool Session::listen(int backlog) {
     return sock.listen(backlog) >= 0;
 }
 
-Session Session::accept(int sec, STATUS mode) {
+Session Session::accept(STATUS mode, int sec) {
     if(sstatus == CLOSED) return closedsession();
     
     Ipaddr target;
     int flag;
-    if(sec) {
-        if(!sock.checkreadable(sec)) {
-            return closedsession();
-        }
-    }
-    Socket nsock = sock.accept(target, flag);
+    Socket nsock = sock.accept(target, flag, sec);
     if(flag < 0) {
         return closedsession();
     } 

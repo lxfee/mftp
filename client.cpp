@@ -120,7 +120,7 @@ Session buildstream(Session& scmd, CONNECTMODE mode) {
         
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
 
-        Session dsession = session.accept(ACPTTIMEOUT, ACTIVE);
+        Session dsession = session.accept(ACTIVE, ACPTTIMEOUT);
         if(!dsession.status()) {
             logger("ERR: can not build data connection", "buildstream");
             return std::move(dsession);

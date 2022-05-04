@@ -17,7 +17,7 @@ public:
     bool startlocalsession(Ipaddr local, STATUS mode);
     bool startsession(Ipaddr target, Ipaddr local, STATUS mode);
 
-    Session accept(int sec = 0, STATUS mode = PASSIVE);
+    Session accept(STATUS mode = PASSIVE, int sec = -1);
 
     
 

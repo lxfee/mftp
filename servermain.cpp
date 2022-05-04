@@ -77,7 +77,7 @@ int main() {
     // tmpth.detach();
 
     while(1) {
-        Session clientsession = localsession.accept(0, PASSIVE);
+        Session clientsession = localsession.accept(PASSIVE);
         if(!clientsession.status()) break;
         thread th(serverthread, std::move(clientsession));
         // 必须要等待子线程函数准备好才继续

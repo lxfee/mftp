@@ -264,7 +264,7 @@ Session Server::buildstream(Session& scmd) {
 
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
 
-        Session dsession = session.accept(ACPTTIMEOUT, PASSIVE);
+        Session dsession = session.accept(PASSIVE, ACPTTIMEOUT);
         if(!dsession.status()) {
             logger("ERR: data connection time out", "buildstream");
         }

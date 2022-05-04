@@ -119,15 +119,22 @@ int Socket::listen(int backlog) {
 }
 
 
-Socket Socket::accept(Ipaddr& addr, int& status) {
+Socket Socket::accept(Ipaddr& addr, int& status, int sec) {
+    Socket nsock(*this);
+    if(sec >= 0) {
+        if(!checkreadable(sec)) {
+            status = -1;
+            nsock.sock = -1;
+            return nsock;
+        }
+    }
     struct sockaddr_in tmpaddr;
     int addr_size = sizeof(tmpaddr);
-    status = ::accept(this->sock, (struct sockaddr*)&tmpaddr, &addr_size);
-    Socket sock(*this);
-    sock.sock = status;
-    if(status < 0) return sock;
+    nsock.sock = ::accept(this->sock, (struct sockaddr*)&tmpaddr, &addr_size);
+    status = nsock.sock;
+    if(status < 0) return nsock;
     addrconvert(tmpaddr, addr);
-    return sock;
+    return nsock;
 }
 
 int Socket::shutdown(SDType howto) {
