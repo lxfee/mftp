@@ -11,7 +11,7 @@
 
 
 /***********************server config****************************/
-
+#define ACPTTIMEOUT 10 // 建立数据连接时accept超时时间（秒）
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
@@ -263,7 +263,7 @@ Session Server::buildstream(Session& scmd) {
 
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
 
-        Session dsession = session.accept(5, PASSIVE);
+        Session dsession = session.accept(ACPTTIMEOUT, PASSIVE);
         if(!dsession.status()) {
             logger("ERR: data connection time out", "buildstream");
         }

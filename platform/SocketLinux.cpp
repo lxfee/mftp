@@ -85,20 +85,37 @@ int Socket::getsockname(Ipaddr& addr) {
     return flag;
 }
 
-int Socket::setsendtimeout(int sec) {
+
+int Socket::checkreadable(int sec) {
     struct timeval timeout;
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
-    socklen_t len = sizeof(timeout);
-	return setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, len);
+    // fd_set: 套接字集合
+    fd_set socks;
+    socks.fds_bits[0] = sock;
+    // select函数可以观察套接字集合中是否可读可写或出错（从第2~4参数传入套接字集合）
+    // 如果不可读/写/无出错就阻塞
+    // 阻塞时间由第5个参数决定，NULL代表一直阻塞
+    // 第一个参数填0接口，听说是为了和linux兼容
+    // 返回值为准备好的套接字的个数
+    return ::select(1, &socks, NULL, NULL, &timeout);
 }
 
-int Socket::setrecvtimeout(int sec) {
+int Socket::checkwriteable(int sec) {
     struct timeval timeout;
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
-    socklen_t len = sizeof(timeout);
-	return setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, len);
+    fd_set socks;
+    socks.fds_bits[0] = sock;
+    return ::select(1, NULL, &socks, NULL, &timeout);
+}
+int Socket::checkerro(int sec) {
+    struct timeval timeout;
+    timeout.tv_sec = sec;
+    timeout.tv_usec = 0;
+    fd_set socks;
+    socks.fds_bits[0] = sock;
+    return ::select(1, NULL, NULL, &socks, &timeout);
 }
 
 int Socket::listen(int backlog) {

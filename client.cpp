@@ -8,6 +8,7 @@
 #include "socket.h"
 
 CONNECTMODE mode = PASV;
+#define ACPTTIMEOUT 10 // 建立数据连接时accept超时时间（秒）
 namespace fs = std::filesystem;
 using namespace std;
 std::string buffer;
@@ -119,7 +120,7 @@ Session buildstream(Session& scmd, CONNECTMODE mode) {
         
         scmd.sendmsg("PORT " + std::to_string(session.getlocaladdr().port));
 
-        Session dsession = session.accept(5, ACTIVE);
+        Session dsession = session.accept(ACPTTIMEOUT, ACTIVE);
         if(!dsession.status()) {
             logger("ERR: can not build data connection", "buildstream");
             return std::move(dsession);
