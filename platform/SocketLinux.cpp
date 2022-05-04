@@ -67,9 +67,15 @@ int Socket::bind(Ipaddr addr) {
     return ::bind(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 }
 
-int Socket::connect(Ipaddr addr) {
+int Socket::connect(Ipaddr addr, int sec) {
     struct sockaddr_in serv_addr;
     addrconvert(addr, serv_addr);
+    int ret;
+    struct timeval timeo;
+    timeo.tv_sec = sec;
+    timeo.tv_usec = 0;
+    socklen_t len = sizeof(timeo);
+    if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeo, len) < 0) return -1;
     return ::connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 }
 
@@ -125,15 +131,22 @@ int Socket::listen(int backlog) {
 }
 
 
-Socket Socket::accept(Ipaddr& addr, int& status) {
+Socket Socket::accept(Ipaddr& addr, int& status, int sec) {
+    Socket nsock(*this);
+    if(sec >= 0) {
+        if(!checkreadable(sec)) {
+            status = -1;
+            nsock.sock = -1;
+            return nsock;
+        }
+    }
     struct sockaddr_in tmpaddr;
     socklen_t addr_size = sizeof(tmpaddr);
-    status = ::accept(this->sock, (struct sockaddr*)&tmpaddr, &addr_size);
-    Socket sock(*this);
-    sock.sock = status;
-    if(status < 0) return sock;
+    nsock.sock = ::accept(this->sock, (struct sockaddr*)&tmpaddr, &addr_size);
+    status = nsock.sock;
+    if(status < 0) return nsock;
     addrconvert(tmpaddr, addr);
-    return sock;
+    return nsock;
 }
 
 int Socket::shutdown(SDType howto) {
