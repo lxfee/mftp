@@ -249,7 +249,8 @@ Session Server::buildstream(Session& scmd) {
 
     } else if(cmd == "PASV") {
         Ipaddr local = scmd.getlocaladdr();
-        local.port = 0;
+        // local.port = 0;
+        local.port += getrandom(20000, 30000);
         Session session = Session::buildlocalsession(local, CLOSE);
 
         if(!session.status()) {

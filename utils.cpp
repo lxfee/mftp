@@ -6,6 +6,15 @@
 #include <vector>
 #include <algorithm>
 #include "socket.h"
+#include <random>
+
+int getrandom(int l, int r) {
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<int> dist(l, r); // distribution in range [1, 6]
+
+    return dist(rng);
+}
 
 std::string getcurrenttime() {
     // 基于当前系统的当前日期/时间

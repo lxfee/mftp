@@ -16,3 +16,5 @@ bool direxists(std::string path);
 
 // only support ipv4
 bool parseIp(Ipaddr& addr, std::string ip);
+
+int getrandom(int l, int r);
