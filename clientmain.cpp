@@ -79,6 +79,7 @@ int main() {
     string cmd;
     Session scmd = Session::closedsession();
     while(1) {
+        sync(scmd); // 同步
         cout << "mftp> ";
         nextline();
         gettok(cmd);

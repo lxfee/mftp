@@ -145,8 +145,9 @@ void close(Session& scmd) {
 }
 
 void sync(Session& scmd) {
+    if(!scmd.status()) return ;
     scmd.sendmsg("HELLO");
-    while(!scmd.expect("HELLO"));
+    while(scmd.status() && !scmd.expect("HELLO"));
 }
 
 
