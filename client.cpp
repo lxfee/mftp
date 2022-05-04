@@ -8,7 +8,6 @@
 #include "socket.h"
 
 CONNECTMODE mode = PASV;
-#define ACPTTIMEOUT 10 // 建立数据连接时accept超时时间（秒）
 namespace fs = std::filesystem;
 using namespace std;
 std::string buffer;

@@ -243,7 +243,7 @@ Session Session::closedsession() {
 
 bool Session::starttargetsession(Ipaddr target, STATUS mode) {
     if(!renew()) return false;
-    if(sock.connect(target) < 0 || sock.getsockname(this->local) < 0) {
+    if(sock.connect(target, CONNECTIMTEOUT) < 0 || sock.getsockname(this->local) < 0) {
         close();
         return false;
     }
@@ -264,7 +264,7 @@ bool Session::startlocalsession(Ipaddr local, STATUS mode) {
 
 bool Session::startsession(Ipaddr target, Ipaddr local, STATUS mode) {
     if(!renew()) return false;
-    if(sock.bind(local) < 0 || sock.connect(target) < 0 || sock.getsockname(this->local) < 0) {
+    if(sock.bind(local) < 0 || sock.connect(target, CONNECTIMTEOUT) < 0 || sock.getsockname(this->local) < 0) {
         close();
         return false;
     }

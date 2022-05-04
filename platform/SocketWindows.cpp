@@ -61,10 +61,34 @@ int Socket::bind(Ipaddr addr) {
     return ::bind(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 }
 
-int Socket::connect(Ipaddr addr) {
+int Socket::connect(Ipaddr addr, int sec) {
     struct sockaddr_in serv_addr;
     addrconvert(addr, serv_addr);
-    return ::connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+    unsigned long iMode = 1;
+	int iResult = ioctlsocket(sock, FIONBIO, &iMode);
+	if (iResult != NO_ERROR) return -1;
+    // false?
+	if(::connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == false) return -1;
+	// restart the socket mode
+	iMode = 0;
+	iResult = ioctlsocket(sock, FIONBIO, &iMode);
+	if (iResult != NO_ERROR) return -1;
+
+    fd_set Write, Err;
+	FD_ZERO(&Write);
+	FD_ZERO(&Err);
+	FD_SET(sock, &Write);
+	FD_SET(sock, &Err);
+    
+    TIMEVAL Timeout;
+	Timeout.tv_sec = sec;
+    Timeout.tv_usec = 0;
+	// check if the socket is ready
+	select(0, NULL, &Write, &Err, &Timeout);
+	if (FD_ISSET(sock, &Write)) {
+		return 0;
+	}
+    return -1;
 }
 
 
@@ -85,8 +109,8 @@ int Socket::checkreadable(int sec) {
     timeout.tv_usec = 0;
     // fd_set: 套接字集合
     fd_set socks;
-    socks.fd_count = 1;
-    socks.fd_array[0] = sock;
+    FD_ZERO(&socks);
+    FD_SET(sock, &socks);
     // select函数可以观察套接字集合中是否可读可写或出错（从第2~4参数传入套接字集合）
     // 如果不可读/写/无出错就阻塞
     // 阻塞时间由第5个参数决定，NULL代表一直阻塞
@@ -100,8 +124,8 @@ int Socket::checkwriteable(int sec) {
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
     fd_set socks;
-    socks.fd_count = 1;
-    socks.fd_array[0] = sock;
+    FD_ZERO(&socks);
+    FD_SET(sock, &socks);
     return ::select(0, NULL, &socks, NULL, &timeout);
 }
 int Socket::checkerro(int sec) {
@@ -109,8 +133,8 @@ int Socket::checkerro(int sec) {
     timeout.tv_sec = sec;
     timeout.tv_usec = 0;
     fd_set socks;
-    socks.fd_count = 1;
-    socks.fd_array[0] = sock;
+    FD_ZERO(&socks);
+    FD_SET(sock, &socks);
     return ::select(0, NULL, NULL, &socks, &timeout);
 }
 

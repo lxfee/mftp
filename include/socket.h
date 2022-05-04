@@ -33,7 +33,7 @@ class Socket {
 public:
 	Socket();
 	int bind(Ipaddr addr);
-	int connect(Ipaddr addr);
+	int connect(Ipaddr addr, int sec);
 	int listen(int backlog);
 	Socket accept(Ipaddr& addr, int& status, int sec);
 	int shutdown(SDType howto);

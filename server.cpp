@@ -11,7 +11,6 @@
 
 
 /***********************server config****************************/
-#define ACPTTIMEOUT 10 // 建立数据连接时accept超时时间（秒）
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 

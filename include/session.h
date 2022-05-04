@@ -4,6 +4,8 @@
 #include <memory>
 #define BUFFER_SIZE 102400
 enum STATUS {ACTIVE = 0, PASSIVE = 1, CLOSE = 2, CLOSED = 3};
+#define CONNECTIMTEOUT 5
+#define ACPTTIMEOUT 10 // 建立数据连接时accept超时时间（秒）
 
 class Session {
 public:
