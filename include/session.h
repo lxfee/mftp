@@ -2,7 +2,7 @@
 #include "socket.h"
 #include <string>
 #include <memory>
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 102400
 enum STATUS {ACTIVE = 0, PASSIVE = 1, CLOSE = 2, CLOSED = 3};
 
 class Session {

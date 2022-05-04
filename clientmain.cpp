@@ -53,6 +53,15 @@ bool prasecmd(Session& scmd, string cmd) {
     else if(cmd == "!") {
         runlocalcmd();
     }
+    else if(cmd == "mode") {
+        if(mode == ACTV) {
+            mode = PASV;
+            cout << "PASV" << endl;
+        } else {
+            mode = ACTV;
+            cout << "ACTV" << endl;
+        }
+    }
     else {
         cout << "unknown cmd" << endl;
     }

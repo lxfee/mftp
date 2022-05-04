@@ -99,27 +99,27 @@ bool getlist(std::string path, std::ostream &list) {
     }
     wide = std::max(wide, 4);
     wide += 2;
-    list << "[type] ";
+    list << "[type]  ";
     list << std::setw(20) << "size";
     list << std::setw(wide) << "name";
     list << std::endl;
     for(const auto& ppath : paths) {
         switch(ppath.first) {
             case 0:
-                list << "[D] ";
+                list << "[D]     ";
                 list << std::setw(20) << " ";
                 list << std::setw(wide) << ppath.second.filename().string();
                 list << std::endl;
                 break;
             case 1:
-                list << "[F] ";
+                list << "[F]     ";
                 list << std::setw(20) << ComputeFileSize(ppath.second);
                 list << std::setw(wide) << ppath.second.filename().string();
                 list << std::endl;
                 break;
             case 2:
             default:
-                list << "[?] ";
+                list << "[?]     ";
                 list << std::setw(20) << " ";
                 list << std::setw(wide) << ppath.second.filename().string();
                 list << std::endl;
