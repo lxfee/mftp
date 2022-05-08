@@ -75,6 +75,7 @@ int Socket::connect(Ipaddr addr, int sec) {
     timeo.tv_sec = sec;
     timeo.tv_usec = 0;
     socklen_t len = sizeof(timeo);
+    // setsockopt设置读取超时时限
     if (setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeo, len) < 0) return -1;
     return ::connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 }

@@ -61,17 +61,18 @@ int Socket::bind(Ipaddr addr) {
     return ::bind(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 }
 
+// sec代表connect超时时间
 int Socket::connect(Ipaddr addr, int sec) {
     struct sockaddr_in serv_addr;
     addrconvert(addr, serv_addr);
     unsigned long iMode = 1;
+    // 设置为非阻塞模式
 	int iResult = ioctlsocket(sock, FIONBIO, &iMode);
 	if (iResult != NO_ERROR) return -1;
-    // false?
 	if(::connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == false) return -1;
-	// restart the socket mode
 	iMode = 0;
-	iResult = ioctlsocket(sock, FIONBIO, &iMode);
+	// 设回阻塞模式
+    iResult = ioctlsocket(sock, FIONBIO, &iMode);
 	if (iResult != NO_ERROR) return -1;
 
     fd_set Write, Err;
@@ -83,7 +84,7 @@ int Socket::connect(Ipaddr addr, int sec) {
     TIMEVAL Timeout;
 	Timeout.tv_sec = sec;
     Timeout.tv_usec = 0;
-	// check if the socket is ready
+	// 检查socket在sec秒内是否可读
 	select(0, NULL, &Write, &Err, &Timeout);
 	if (FD_ISSET(sock, &Write)) {
 		return 0;

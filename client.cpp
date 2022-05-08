@@ -140,6 +140,7 @@ bool login(Session& scmd, string user, string passwd) {
 void close(Session& scmd) {
     if(scmd.status()) {
         scmd.sendmsg("BYE");
+        // 先关闭连接，再等待对方关闭连接
         scmd.close();
     }
 }
@@ -234,14 +235,15 @@ void getfile(Session& scmd) {
     ofstream fout;
     fout.open(local, ios::binary);
     MUST(fout, "can not create file", fout.close());
-
+    // 发送请求
     scmd.sendmsg("GET " + remote);
+    // 期望接收到OK，如果没接收到，打印错误信息并退出
     EXPECT("OK", "request refused");
-    
+    // 建立连接
     Session datasession = buildstream(scmd, mode);
     MUST(datasession.status(), "error ocur!", );
     EXPECT("BEGIN", "can not build data session");
-    
+    // 接收
     datasession.recvstream(fout);
     fout.close();
     cout << "file saved: " + local << endl;

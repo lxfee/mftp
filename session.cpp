@@ -15,6 +15,7 @@ void Session::throwerror(std::string msg) {
 int Session::wait() {
     int nbytes;
     char ch;
+    // 直到返回0（对方关闭），或返回-1（出错）
     while((nbytes = sock.read(&ch, 1)) > 0);
     return nbytes;
 }
@@ -35,11 +36,13 @@ Session::Session(Session && session) noexcept :
 Session::~Session() {
     switch (sstatus) {
         case PASSIVE:
+            // 被动模式
             logger("Wait session closed", target.to_string());
             wait();
             sock.shutdown(SD_WR);
             break;
         case ACTIVE:
+            // 主动模式
             sock.shutdown(SD_WR);
             wait();
             break;
@@ -49,6 +52,7 @@ Session::~Session() {
         default:
             return ;
     }
+    // shutdown只是关闭连接，close才是操作系统真正回收套接字资源
     sock.close();
     logger("Session closed", target.to_string());
 }
@@ -91,7 +95,6 @@ void Session::sendstream(std::istream& is, size_t size) {
     char buffer[BUFFER_SIZE];
     size_t tot = size;
     size_t nbytes;
-
     if(size == -1) {
         nbytes = sizeof(buffer);
         // 发到流发完为止
@@ -106,7 +109,6 @@ void Session::sendstream(std::istream& is, size_t size) {
             logger(nbytes, "send - to socket");
         } while(nbytes);
     } else {
-        logger(size, "size");
         if(size == 0) return ;
         nbytes = std::min(size, sizeof(buffer));
         // 发送特定数量字节
@@ -114,13 +116,11 @@ void Session::sendstream(std::istream& is, size_t size) {
             is.read(buffer, nbytes);
             nbytes = is.gcount();
             if(nbytes <= 0) break;
-
             // logger(nbytes, "send - from file");
             if((nbytes = sock.write(buffer, nbytes)) < 0) {
                 throwerror("session closed");
             }
             // logger(nbytes, "send - to socket");
-
             size -= nbytes;
             nbytes = std::min(size, nbytes);
             printprocess(tot - size, tot, "sending", target.to_string());
@@ -137,6 +137,7 @@ void Session::recvmsg(std::string& msg) {
     char ch;
     int nbytes;
     while((nbytes = sock.read(&ch, 1)) > 0) {
+        // 一个字符一个字符地读，直到读到换行符为止
         if(ch == '\n') break;
         msg.push_back(ch);
     }
@@ -152,11 +153,9 @@ void Session::recvstream(std::ostream& os) {
     sock.read(&size, sizeof(size));
     size_t tot = size;
     logger(size, "recv size");
-
     // 接收数据
     char buffer[BUFFER_SIZE];
     size_t nbytes = std::min(size, sizeof(buffer));
-
     if(size == -1) {
         // 未指明数据大小
         while((nbytes = sock.read(buffer, sizeof(buffer))) > 0) {

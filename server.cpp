@@ -144,18 +144,18 @@ void Server::operator()(Session& scmd) {
 }
 
 
-#define MUSTNOT(EXP, MSG, OP) \
+#define MUSTNOT(EXP, MSG, OP, RETURNVAL) \
     if(EXP) {\
         scmd.sendmsg(MSG); \
         OP; \
-        return ; \
+        return RETURNVAL; \
     }
 
-#define MUST(EXP, MSG, OP) \
+#define MUST(EXP, MSG, OP, RETURNVAL) \
     if(!(EXP)) {\
         scmd.sendmsg(MSG); \
         OP; \
-        return ; \
+        return RETURNVAL; \
     }
 
 void Server::putfile(Session& scmd) {
@@ -163,16 +163,16 @@ void Server::putfile(Session& scmd) {
     scmd.readline(savepath);
     logger(savepath);
     savepath = getpath(config.path, savepath);
-    MUST(config.users.count(user), "ERR: forbiden", );
-    MUSTNOT(fs::exists(savepath), "ERR: file exist", );
+    MUST(config.users.count(user), "ERR: forbiden", ,);
+    MUSTNOT(fs::exists(savepath), "ERR: file exist", ,);
     
     std::ofstream fout;
     fout.open(savepath, std::ios::binary);
-    MUST(fout, "ERR: can not create file", fout.close());
+    MUST(fout, "ERR: can not create file", fout.close(),);
 
     scmd.sendmsg("OK");
     Session datasession = buildstream(scmd);
-    MUST(datasession.status(), "ERR: Can't build", );
+    MUST(datasession.status(), "ERR: Can't build", ,);
     scmd.sendmsg("BEGIN");
     datasession.recvstream(fout);
     fout.close();
@@ -180,7 +180,7 @@ void Server::putfile(Session& scmd) {
 }
 
 void Server::runcmd(Session& scmd) {
-    MUST(config.users.count(user), "ERR: forbiden", );
+    MUST(config.users.count(user), "ERR: forbiden", ,);
     std::string cmd;
     scmd.readline(cmd);
     scmd.sendmsg("OK");
@@ -193,26 +193,26 @@ void Server::getfile(Session& scmd) {
     std::string filepath;
     scmd.readline(filepath);
     filepath = getpath(config.path, filepath);
-    MUST(fs::exists(filepath), "ERR: path not exisit",);
-    MUST(fs::is_regular_file(filepath), "ERR: it is not a file",);
+    MUST(fs::exists(filepath), "ERR: path not exisit",,);
+    MUST(fs::is_regular_file(filepath), "ERR: it is not a file",,);
 
     std::ifstream fin;
     fin.open(filepath, std::ios::binary);
-    MUST(fin, "ERR: can not open file", fin.close());
+    MUST(fin, "ERR: can not open file", fin.close(),);
     scmd.sendmsg("OK");
+    // 建立数据连接
     Session datasession = buildstream(scmd);
-    MUST(datasession.status(), "ERR: Can't build", );
+    MUST(datasession.status(), "ERR: Can't build", ,);
     scmd.sendmsg("BEGIN");
     // 获得文件大小
     fin.seekg(0, fin.end);
     size_t fsize = fin.tellg();
     fin.seekg(0, fin.beg);
-
+    // 发送文件
     datasession.sendstream(fin, fsize);
     fin.close();
-
-    // 服务器主动关闭
-    if(fsize == 0)
+    // 如果发送的是文件流服务器主动关闭
+    if(fsize == -1)
         datasession.close();
 }
 
@@ -221,10 +221,10 @@ void Server::list(Session& scmd) {
     scmd.gettok(path);
 
     std::stringstream listinfo;
-    MUST(getlist(getpath(config.path, path), listinfo), "ERR: Path not exisit", );
+    MUST(getlist(getpath(config.path, path), listinfo), "ERR: Path not exisit", ,);
     scmd.sendmsg("OK");
     Session datasession = buildstream(scmd);
-    MUST(datasession.status(),"ERR: Can't build",);
+    MUST(datasession.status(),"ERR: Can't build",,);
     scmd.sendmsg("BEGIN");
     datasession.sendstream(listinfo, listinfo.tellp());
 }
@@ -237,7 +237,7 @@ Session Server::buildstream(Session& scmd) {
         scmd.gettok(cmd);
         Ipaddr target = scmd.gettargetaddr();
         target.port = atoi(cmd.c_str()); 
-        
+        // 数据端口地址
         Ipaddr local = scmd.getlocaladdr();
         local.port++; // 数据端口 = 命令端口 + 1
         Session session = Session::buildsession(target, local, PASSIVE);
@@ -280,37 +280,17 @@ bool Server::login(Session& scmd) {
     scmd.sendmsg("LOGIN");
 
     // USER
-    if(!scmd.expect("USER")) {
-        scmd.sendmsg("ERR: expect USER");
-        scmd.close();
-        return false;
-    }
+    MUST(scmd.expect("USER"), "ERR: expect USER", scmd.close(), false);
     scmd.gettok(cmd);
-    if(cmd == "anonymous" && !config.allowAnonymous){
-        scmd.sendmsg("ERR: anonymous is not allow");
-        scmd.close();
-        return false;
-    }
-    if(cmd != "anonymous" && !config.users.count(cmd)) {
-        scmd.sendmsg("ERR: user not exist");
-        scmd.close();
-        return false;
-    }
+    MUSTNOT(cmd == "anonymous" && !config.allowAnonymous, "ERR: anonymous is not allow", scmd.close(), false);
+    MUSTNOT(cmd != "anonymous" && !config.users.count(cmd), "ERR: user not exist", scmd.close(), false);
     user = cmd;
     scmd.sendmsg("OK");
     
     // PASSWORD 
-    if(!scmd.expect("PASSWORD")) {
-        scmd.sendmsg("ERR: expect PASSWORD");
-        scmd.close();
-        return false;
-    }
+    MUST(scmd.expect("PASSWORD"), "ERR: expect PASSWORD", scmd.close(), false);
     scmd.gettok(cmd);
-    if(user != "anonymous" && config.users.at(user) != cmd)  {
-        scmd.sendmsg("ERR: authentication failed");
-        scmd.close();
-        return false;
-    }
+    MUST(user != "anonymous" && config.users.at(user) == cmd, "ERR: authentication failed", scmd.close(), false);
     passwd = cmd;
     scmd.sendmsg("OK");
 

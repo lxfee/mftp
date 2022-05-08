@@ -29,6 +29,7 @@ struct Ipaddr {
 	std::string to_string();
 };
 
+// 封装
 class Socket {
 public:
 	Socket();
