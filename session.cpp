@@ -83,16 +83,16 @@ void Session::sendmsg(const std::string& msg) {
 
 }
 
-// size = 0代表保持发送，直到会话被关闭
-void Session::sendstream(std::istream& is, int size) {
+// size = -1代表保持发送，直到会话被关闭
+void Session::sendstream(std::istream& is, size_t size) {
     // 发送待发送的字节数
-    sock.write(&size, 4);
+    sock.write(&size, sizeof(size));
     logger(size, "send size");
     char buffer[BUFFER_SIZE];
-    int tot = size;
-    int nbytes;
+    size_t tot = size;
+    size_t nbytes;
 
-    if(size == 0) {
+    if(size == -1) {
         nbytes = sizeof(buffer);
         // 发到流发完为止
         do {
@@ -106,7 +106,9 @@ void Session::sendstream(std::istream& is, int size) {
             logger(nbytes, "send - to socket");
         } while(nbytes);
     } else {
-        nbytes = std::min((int)sizeof(buffer), size);
+        logger(size, "size");
+        if(size == 0) return ;
+        nbytes = std::min(size, sizeof(buffer));
         // 发送特定数量字节
         do {
             is.read(buffer, nbytes);
@@ -146,30 +148,29 @@ void Session::recvmsg(std::string& msg) {
 
 void Session::recvstream(std::ostream& os) {
     // 接收字节数
-    int size;
-    sock.read(&size, 4);
-    int tot = size;
+    size_t size;
+    sock.read(&size, sizeof(size));
+    size_t tot = size;
     logger(size, "recv size");
 
     // 接收数据
     char buffer[BUFFER_SIZE];
-    int nbytes = std::min(size, (int)sizeof(buffer));
+    size_t nbytes = std::min(size, sizeof(buffer));
 
-    
-    if(size == 0) {
+    if(size == -1) {
         // 未指明数据大小
         while((nbytes = sock.read(buffer, sizeof(buffer))) > 0) {
             logger(nbytes, "recv - from socket");
             os.write(buffer, nbytes);
         }
-
     } else {
         // 接收特定数量字节
+        if(!size) return ;
         while((nbytes = sock.read(buffer, nbytes)) > 0) {
             // logger(nbytes, "recv - from socket");
             os.write(buffer, nbytes);
             size -= nbytes;
-            nbytes = std::min(size, (int)sizeof(buffer));
+            nbytes = std::min(size, sizeof(buffer));
 
             printprocess(tot - size, tot, "recving", target.to_string());
             if(!nbytes) break;

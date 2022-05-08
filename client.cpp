@@ -268,7 +268,7 @@ void putfile(Session& scmd) {
     EXPECT("BEGIN", "can not build data session");
     // 获得文件大小
     fin.seekg(0, fin.end);
-    int fsize = fin.tellg();
+    size_t fsize = fin.tellg();
     fin.seekg(0, fin.beg);
 
     datasession.sendstream(fin, fsize);

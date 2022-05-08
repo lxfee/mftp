@@ -50,7 +50,7 @@ public:
     // 基础交流方法
     void sendmsg(const std::string& msg);
     void recvmsg(std::string& smg);
-    void sendstream(std::istream& os, int size = 0);
+    void sendstream(std::istream& os, size_t size = -1);
     void recvstream(std::ostream& is);
 
     

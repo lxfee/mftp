@@ -18,8 +18,8 @@ int runningthread = 0;
 
 void printthread() {
     while(1) {
-        sleep(1);
-        logger(runningthread, "Thread Printer");
+        sleep(10);
+        logger("running thread: " + to_string(runningthread), "Thread Printer");
     }
 }
 
@@ -73,8 +73,8 @@ int main() {
     logger("Server listening on " + localsession.getlocaladdr().to_string(), localsession.getlocaladdr().to_string());
     
 
-    // thread tmpth(printthread);
-    // tmpth.detach();
+    thread tmpth(printthread);
+    tmpth.detach();
 
     while(1) {
         Session clientsession = localsession.accept(PASSIVE);

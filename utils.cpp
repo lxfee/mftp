@@ -12,7 +12,6 @@ int getrandom(int l, int r) {
     std::random_device dev;
     std::mt19937 rng(dev());
     std::uniform_int_distribution<int> dist(l, r); // distribution in range [1, 6]
-
     return dist(rng);
 }
 
@@ -41,10 +40,10 @@ bool direxists(std::string path) {
     return fs::exists(path) && fs::is_directory(path);
 }
 
-uintmax_t ComputeFileSize(const fs::path& pathToCheck) {
-    if (fs::exists(pathToCheck) && fs::is_regular_file(pathToCheck)) {
+static uintmax_t computefilesize(const fs::path& path) {
+    if (fs::exists(path) && fs::is_regular_file(path)) {
         auto err = std::error_code{};
-        auto filesize = fs::file_size(pathToCheck, err);
+        auto filesize = fs::file_size(path, err);
         if (filesize != static_cast<uintmax_t>(-1)) return filesize;
     }
     return static_cast<uintmax_t>(-1);
@@ -122,7 +121,7 @@ bool getlist(std::string path, std::ostream &list) {
                 break;
             case 1:
                 list << "[F]     ";
-                list << std::setw(20) << ComputeFileSize(ppath.second);
+                list << std::setw(20) << computefilesize(ppath.second);
                 list << std::setw(wide) << ppath.second.filename().string();
                 list << std::endl;
                 break;
@@ -138,7 +137,7 @@ bool getlist(std::string path, std::ostream &list) {
     return true;
 }
 
-// only support ipv4
+
 bool parseIp(Ipaddr& addr, std::string ip) {
     int p = -1;
     for(int i = 0; i < ip.size(); i++) {
