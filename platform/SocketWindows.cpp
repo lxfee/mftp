@@ -70,10 +70,6 @@ int Socket::connect(Ipaddr addr, int sec) {
 	int iResult = ioctlsocket(sock, FIONBIO, &iMode);
 	if (iResult != NO_ERROR) return -1;
 	if(::connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) == false) return -1;
-	iMode = 0;
-	// 设回阻塞模式
-    iResult = ioctlsocket(sock, FIONBIO, &iMode);
-	if (iResult != NO_ERROR) return -1;
 
     fd_set Write, Err;
 	FD_ZERO(&Write);
@@ -86,9 +82,14 @@ int Socket::connect(Ipaddr addr, int sec) {
     Timeout.tv_usec = 0;
 	// 检查socket在sec秒内是否可读
 	select(0, NULL, &Write, &Err, &Timeout);
-	if (FD_ISSET(sock, &Write)) {
+	iMode = 0;
+	// 设回阻塞模式
+    iResult = ioctlsocket(sock, FIONBIO, &iMode);
+	if (iResult != NO_ERROR) return -1;
+    if (FD_ISSET(sock, &Write)) {
 		return 0;
 	}
+    
     return -1;
 }
 
