@@ -1,63 +1,45 @@
-platform = 
-flag = 
-lib =  
-include_dir = include
-objs = session.o utils.o
-serverobjs = servermain.o server.o
-clientobjs = clientmain.o client.o
+.PHONY : clean all
 
+# 构建需要的变量
+CC = g++
+serverobjects = servermain.o server.o
+clientobjects = clientmain.o client.o
+objects = session.o utils.o
+IncludeDir = include
+CFLAG = -MMD -std=c++17
+platform = 
+LIB = 
+VPATH = $(includedir):platform
+
+ifeq ($(platform), windows)
+objects += SocketWindows.o
+CFLAG += -DWINDOWS
+LIB += -lws2_32
+else
+objects += SocketLinux.o
+CFLAG += -DLINUX 
+endif
+
+# 构建目标
 all : client server
 
-ifeq ($(platform), windows)
-serverobjs += SocketWindows.o
-clientobjs += SocketWindows.o
-flag += -DWINDOWS
-lib += -lws2_32
-else
-serverobjs += SocketLinux.o
-clientobjs += SocketLinux.o
-flag += -DLINUX 
-endif
 
-server:  $(serverobjs) $(objs)
-	g++ -g $(flag) $(serverobjs) $(objs) -o server  -lpthread $(lib)
+client: $(objects) $(clientobjects)
+	$(CC) $(objects) $(clientobjects) $(LIB) -o client
+
+server: $(objects) $(serverobjects)
+	$(CC) $(objects) $(serverobjects) $(LIB) -o server
+
+$(objects) $(serverobjects) $(clientobjects): %.o: %.cpp
+	$(CC) -I$(IncludeDir) $(CFLAG) -c $< -o $@
+
+-include *.d
 
 
-client :  $(clientobjs) $(objs)
-	g++ -g $(flag) $(clientobjs) $(objs) -o client  $(lib)
-
-
-servermain.o : servermain.cpp
-	g++ $(flag) -I$(include_dir)  -c -g servermain.cpp
-
-clientmain.o : clientmain.cpp
-	g++ $(flag) -I$(include_dir) -c -g clientmain.cpp
-
-
-SocketLinux.o : platform/SocketLinux.cpp
-	g++ -I$(include_dir) -DLINUX -c -g platform/SocketLinux.cpp
-
-SocketWindows.o : platform/SocketWindows.cpp
-	g++ -I$(include_dir) -DWINDOWS -c -g platform/SocketWindows.cpp
-
-session.o : session.cpp
-	g++ $(flag) -I$(include_dir) -c -g session.cpp
-
-
-utils.o : utils.cpp
-	g++ $(flag) -std=c++17 -I$(include_dir) -c -g utils.cpp
-
-client.o : client.cpp
-	g++ $(flag) -std=c++17 -I$(include_dir) -c -g client.cpp
-
-server.o : server.cpp
-	g++ $(flag) -std=c++17 -I$(include_dir) -c -g server.cpp
-
-
+# 其它指令
 clean :
 ifeq ($(platform), windows)
-	-del *.o *.exe
+	-del *.o *.d server.exe client.exe
 else
-	-rm -f *.o server client
+	-rm -f *.o *.d server client
 endif
-	
