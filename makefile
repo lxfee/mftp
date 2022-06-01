@@ -56,7 +56,7 @@ server.o : server.cpp
 
 clean :
 ifeq ($(platform), windows)
-	@echo I don't know how to del files on windows
+	-del *.o *.exe
 else
 	-rm -f *.o server client
 endif

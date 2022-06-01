@@ -1,16 +1,14 @@
-// need C++ 17
 #include "utils.h"
 #include "logger.hpp"
 #include <sstream>
-#include <filesystem>
 #include <vector>
 #include <algorithm>
-#include "socket.h"
 #include <random>
+#include <ctime>
 
 int getrandom(int l, int r) {
-    std::random_device dev;
-    std::mt19937 rng(dev());
+    static std::random_device dev;
+    static std::mt19937 rng(dev());
     std::uniform_int_distribution<int> dist(l, r); // distribution in range [1, 6]
     return dist(rng);
 }
@@ -34,22 +32,33 @@ std::string getcurrenttime() {
     return res;
 }
     
-namespace fs = std::filesystem;
 
 bool direxists(std::string path) {
-    return fs::exists(path) && fs::is_directory(path);
+    using namespace fs;
+    return exists(path) && is_directory(path);
 }
 
-static uintmax_t computefilesize(const fs::path& path) {
-    if (fs::exists(path) && fs::is_regular_file(path)) {
+bool fileexists(std::string path) {
+    using namespace fs;
+    return exists(path) && is_regular_file(path);
+}
+
+bool pathexists(std::string path) {
+    using namespace fs;
+    return exists(path);
+}
+
+uintmax_t computefilesize(fs::path path) {
+    using namespace fs;
+    if(exists(path) && is_regular_file(path)) {
         auto err = std::error_code{};
-        auto filesize = fs::file_size(path, err);
+        auto filesize = file_size(path, err);
         if (filesize != static_cast<uintmax_t>(-1)) return filesize;
     }
     return static_cast<uintmax_t>(-1);
 }
 
-std::string getpath(std::string base, std::string path) {
+std::string walkpath(std::string base, std::string path) {
     if(path.empty()) return base;
     if(!base.empty() && base.back() == '/') base.pop_back();
     

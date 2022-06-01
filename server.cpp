@@ -1,7 +1,6 @@
 #include "server.h"
 #include "json.hpp"
 #include <fstream>
-#include <dirent.h>
 #include <iostream>
 #include <algorithm>
 #include <sstream>
@@ -12,11 +11,11 @@
 
 /***********************server config****************************/
 using json = nlohmann::json;
-namespace fs = std::filesystem;
 
 ServerConfig::ServerConfig() {
+    using namespace fs;
     std::ifstream fin;
-    fs::create_directories("tmp");
+    create_directories("tmp");
     fin.open("./config.json");
     if(!fin) {
         fin.close();
@@ -162,9 +161,9 @@ void Server::putfile(Session& scmd) {
     std::string savepath;
     scmd.readline(savepath);
     logger(savepath);
-    savepath = getpath(config.path, savepath);
+    savepath = walkpath(config.path, savepath);
     MUST(config.users.count(user), "ERR: forbiden", ,);
-    MUSTNOT(fs::exists(savepath), "ERR: file exist", ,);
+    MUSTNOT(pathexists(savepath), "ERR: path exist", ,);
     
     std::ofstream fout;
     fout.open(savepath, std::ios::binary);
@@ -192,10 +191,10 @@ void Server::runcmd(Session& scmd) {
 void Server::getfile(Session& scmd) {
     std::string filepath;
     scmd.readline(filepath);
-    filepath = getpath(config.path, filepath);
-    MUST(fs::exists(filepath), "ERR: path not exisit",,);
-    MUST(fs::is_regular_file(filepath), "ERR: it is not a file",,);
-
+    filepath = walkpath(config.path, filepath);
+    MUST(pathexists(filepath), "ERR: path not exisit",,);
+    MUST(fileexists(filepath), "ERR: it is not a file",,);
+    size_t fsize = computefilesize(filepath);
     std::ifstream fin;
     fin.open(filepath, std::ios::binary);
     MUST(fin, "ERR: can not open file", fin.close(),);
@@ -204,10 +203,6 @@ void Server::getfile(Session& scmd) {
     Session datasession = buildstream(scmd);
     MUST(datasession.status(), "ERR: Can't build", ,);
     scmd.sendmsg("BEGIN");
-    // 获得文件大小
-    fin.seekg(0, fin.end);
-    size_t fsize = fin.tellg();
-    fin.seekg(0, fin.beg);
     // 发送文件
     datasession.sendstream(fin, fsize);
     fin.close();
@@ -221,7 +216,7 @@ void Server::list(Session& scmd) {
     scmd.gettok(path);
 
     std::stringstream listinfo;
-    MUST(getlist(getpath(config.path, path), listinfo), "ERR: Path not exisit", ,);
+    MUST(getlist(walkpath(config.path, path), listinfo), "ERR: Path not exisit", ,);
     scmd.sendmsg("OK");
     Session datasession = buildstream(scmd);
     MUST(datasession.status(),"ERR: Can't build",,);
