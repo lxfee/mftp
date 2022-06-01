@@ -8,13 +8,13 @@ objects = session.o utils.o
 IncludeDir = include
 CFLAG = -MMD -std=c++17
 platform = 
-LIB = 
+LIB = pthread
 VPATH = $(includedir):platform
 
 ifeq ($(platform), windows)
 objects += SocketWindows.o
 CFLAG += -DWINDOWS
-LIB += -lws2_32
+LIB += ws2_32
 else
 objects += SocketLinux.o
 CFLAG += -DLINUX 
@@ -25,10 +25,10 @@ all : client server
 
 
 client: $(objects) $(clientobjects)
-	$(CC) $(objects) $(clientobjects) $(LIB) -o client
+	$(CC) $(objects) $(clientobjects) $(LIB:%=-l%) -o client
 
 server: $(objects) $(serverobjects)
-	$(CC) $(objects) $(serverobjects) $(LIB) -o server
+	$(CC) $(objects) $(serverobjects) $(LIB:%=-l%) -o server
 
 $(objects) $(serverobjects) $(clientobjects): %.o: %.cpp
 	$(CC) -I$(IncludeDir) $(CFLAG) -c $< -o $@
